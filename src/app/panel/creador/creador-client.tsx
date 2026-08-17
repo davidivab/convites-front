@@ -16,6 +16,7 @@ import {
 } from "@/lib/convites-api"
 import { progresoTotal, type Iniciativa } from "@/lib/data"
 import type { ApiAporte } from "@/lib/types"
+import { VoluntarioTerritorioBanner } from "@/components/perfil/voluntario-territorio-banner"
 import {
   Check,
   Megaphone,
@@ -26,7 +27,7 @@ import {
 } from "lucide-react"
 
 export function PanelCreadorClient() {
-  const { token, loading: authLoading, hasPermission } = useRequireRoleTree(
+  const { user, token, loading: authLoading, hasPermission } = useRequireRoleTree(
     "/panel/creador",
     "aportante",
   )
@@ -159,6 +160,9 @@ export function PanelCreadorClient() {
   const tabs = [
     { href: "/panel/aportante", label: "Aportante" },
     { href: "/panel/creador", label: "Organizador", active: true },
+    ...(hasPermission("profesional_perfil.view_own")
+      ? [{ href: "/panel/profesional", label: "Profesional" }]
+      : []),
     ...(hasPermission("iniciativas.moderate")
       ? [{ href: "/moderacion", label: "Moderación" }]
       : []),
@@ -177,9 +181,14 @@ export function PanelCreadorClient() {
   return (
     <DashboardShell
       title="Tus convites"
-      subtitle="Haz seguimiento a lo que la comunidad ya reservó y a lo que todavía falta por conseguir."
+      subtitle={
+        user?.roles?.includes("voluntario")
+          ? "Organiza convites en tu territorio. La aprobación la hace el moderador de tus municipios."
+          : "Haz seguimiento a lo que la comunidad ya reservó y a lo que todavía falta por conseguir."
+      }
       tabs={tabs}
     >
+      <VoluntarioTerritorioBanner user={user} />
       <div className="mb-8 grid gap-4 sm:grid-cols-3">
         <StatTile
           label="Convites abiertos"

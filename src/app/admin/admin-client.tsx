@@ -126,6 +126,7 @@ export function AdminClient() {
       subtitle="Crea moderadores y voluntarios y asígnales municipios activos."
       tabs={[
         { href: "/admin", label: "Usuarios", active: true },
+        { href: "/admin/convites", label: "Convites" },
         { href: "/moderacion", label: "Moderación" },
       ]}
     >

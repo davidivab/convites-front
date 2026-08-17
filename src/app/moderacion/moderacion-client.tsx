@@ -8,10 +8,14 @@ import { Badge } from "@/components/ui/badge"
 import { ApiError } from "@/lib/api"
 import {
   fetchModeracionIniciativas,
+  fetchNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
   moderarIniciativa,
+  type ApiNotification,
 } from "@/lib/convites-api"
 import type { Iniciativa } from "@/lib/data"
-import { Check, X, MapPin, Clock, Package, ShieldCheck, MessageSquare } from "lucide-react"
+import { Bell, Check, X, MapPin, Clock, Package, ShieldCheck, MessageSquare } from "lucide-react"
 
 type DecisionLocal = "aprobada" | "rechazada" | "cambios" | null
 
@@ -26,8 +30,23 @@ export function ModeracionClient() {
   const [decisiones, setDecisiones] = useState<Record<string, DecisionLocal>>({})
   const [actingId, setActingId] = useState<string | null>(null)
   const [nota, setNota] = useState<Record<string, string>>({})
+  const [notifs, setNotifs] = useState<ApiNotification[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [notifBusy, setNotifBusy] = useState(false)
 
   const canModerate = hasPermission("iniciativas.moderate")
+
+  const loadNotifs = useCallback(async () => {
+    if (!token) return
+    try {
+      const res = await fetchNotifications(token, { per_page: 15 })
+      setNotifs(res.data)
+      setUnreadCount(res.unread_count)
+    } catch {
+      setNotifs([])
+      setUnreadCount(0)
+    }
+  }, [token])
 
   const load = useCallback(async () => {
     if (!token) return
@@ -55,7 +74,34 @@ export function ModeracionClient() {
       return
     }
     void load()
-  }, [authLoading, token, canModerate, load])
+    void loadNotifs()
+  }, [authLoading, token, canModerate, load, loadNotifs])
+
+  async function onMarkRead(id: string) {
+    if (!token || notifBusy) return
+    setNotifBusy(true)
+    try {
+      await markNotificationRead(token, id)
+      await loadNotifs()
+    } catch {
+      // ignore — inbox is best-effort
+    } finally {
+      setNotifBusy(false)
+    }
+  }
+
+  async function onMarkAllRead() {
+    if (!token || notifBusy || unreadCount === 0) return
+    setNotifBusy(true)
+    try {
+      await markAllNotificationsRead(token)
+      await loadNotifs()
+    } catch {
+      // ignore
+    } finally {
+      setNotifBusy(false)
+    }
+  }
 
   async function actuar(
     id: string,
@@ -127,6 +173,89 @@ export function ModeracionClient() {
 
   return (
     <div>
+      <section className="mb-8 rounded-xl border border-border bg-card/60 p-4 md:p-5">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="flex items-center gap-2 font-serif text-lg text-foreground">
+            <Bell className="h-4 w-4" />
+            Avisos
+            {unreadCount > 0 ? (
+              <Badge className="bg-accent/15 text-accent-foreground">
+                {unreadCount} sin leer
+              </Badge>
+            ) : null}
+          </h2>
+          {unreadCount > 0 ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={notifBusy}
+              onClick={() => void onMarkAllRead()}
+            >
+              Marcar todas leídas
+            </Button>
+          ) : null}
+        </div>
+        {notifs.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Sin avisos todavía. Cuando un convite entre a revisión o haya un
+            aporte nuevo en tus municipios, aparecerá aquí.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {notifs.map((n) => {
+              const mensaje =
+                (typeof n.data?.mensaje === "string" && n.data.mensaje) ||
+                n.type
+              const slug =
+                typeof n.data?.slug === "string" ? n.data.slug : null
+              const unread = !n.read_at
+              return (
+                <li
+                  key={n.id}
+                  className={`flex flex-wrap items-start justify-between gap-2 rounded-lg border px-3 py-2 text-sm ${
+                    unread
+                      ? "border-border bg-background"
+                      : "border-transparent text-muted-foreground"
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <p className={unread ? "font-medium text-foreground" : ""}>
+                      {mensaje}
+                    </p>
+                    {n.created_at ? (
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(n.created_at).toLocaleString("es-CO")}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    {slug ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        render={<Link href={`/iniciativa/${slug}`} />}
+                      >
+                        Ver
+                      </Button>
+                    ) : null}
+                    {unread ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={notifBusy}
+                        onClick={() => void onMarkRead(n.id)}
+                      >
+                        Leída
+                      </Button>
+                    ) : null}
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </section>
+
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <Badge className="gap-1.5 bg-accent/15 text-accent-foreground">
           <ShieldCheck className="h-3.5 w-3.5" />

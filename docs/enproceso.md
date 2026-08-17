@@ -2,4 +2,4 @@
 
 ## Activo
 
-_(libre)_
+_(libre — loop 5h Cursor front cerrado; colas vacías)_

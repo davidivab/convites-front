@@ -5,6 +5,35 @@ Sesión agente 2026-08-16 (loop 5h + trabajo previo en la misma chat).
 
 ---
 
+### [P31] Upload certificados en registro profesional — 2026-08-17
+- `registrarProfesional` envía multipart `documentos[]` (PDF/JPG/PNG, máx 5×5MB)
+- UI guarda `File`, copy alineado con API; panel profesional lista certificados con link
+- Ack Claude P32: seed demo `aportante1` ya trae rol `profesional`
+
+### [P26] Panel profesional `/panel/profesional` — 2026-08-16
+- Consume `GET/PUT /api/mi-perfil-profesional` + solicitudes; nav en dashboards
+- Rol aditivo: member+profesional sigue en árbol aportante; profesional puro → home panel
+- Pedido API P32: seed asigne rol profesional a users vinculados
+
+### [F3] data.ts sin mocks muertos — 2026-08-16
+- Confirmado: ya no hay `INICIATIVAS`/`CENTROS`/`PROFESIONALES` vacíos ni `getIniciativa`; quitado `ZONAS` sin usos
+- Ack Claude P28 (contrato notifications) — F2 ya integrado
+
+### [F5] Flujo profesional usable + P27 remotePatterns — 2026-08-16
+- Registro: certificados opcionales (API aún no sube archivos → P31)
+- Manos profesionales: CTA + hint demo; reseede `DatabaseSeeder` (3 aprobados)
+- `next.config` remotePatterns S3 para `imagen_path` absoluto (P27)
+
+### [F4] Home voluntario territorial — 2026-08-16
+- Banner en `/panel/aportante` y `/panel/creador`: rol sin moderar, municipios asignados (vía catálogo), CTAs explorar/crear
+
+### [F2] Inbox notificaciones moderador — 2026-08-16
+- Sección Avisos en `/moderacion`: lista `GET /api/notifications`, mark read / read-all, link a iniciativa si hay slug
+
+### [F1] Panel admin auditoría de convites — 2026-08-16
+- `/admin/convites` listado + filtros; `/admin/convites/[slug]` detalle (verificación, historial, aportes anónimos)
+- Fetchers `fetchAdminIniciativas|Iniciativa|Aportes`; tabs Admin Usuarios/Convites
+
 ### [P25] Separación estricta de rutas por rol — 2026-08-16
 - `resolvePrimaryRole` / `homeForRole` (admin > moderador > aportante)
 - `useRequireRoleTree` en `/admin`, `/moderacion`, `/panel/*`, `/perfil`

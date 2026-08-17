@@ -9,6 +9,7 @@ import { ApiError } from "@/lib/api"
 import { cancelarAporte, fetchMisAportes } from "@/lib/convites-api"
 import type { ApiAporte } from "@/lib/types"
 import { CalendarClock, HandHeart, Sprout, CheckCircle2, MapPin } from "lucide-react"
+import { VoluntarioTerritorioBanner } from "@/components/perfil/voluntario-territorio-banner"
 
 function formatAporteItems(aporte: ApiAporte): string {
   if (!aporte.items?.length) {
@@ -122,6 +123,9 @@ export function PanelAportanteClient() {
   const tabs = [
     { href: "/panel/aportante", label: "Aportante", active: true },
     { href: "/panel/creador", label: "Organizador" },
+    ...(hasPermission("profesional_perfil.view_own")
+      ? [{ href: "/panel/profesional", label: "Profesional" }]
+      : []),
     ...(hasPermission("iniciativas.moderate")
       ? [{ href: "/moderacion", label: "Moderación" }]
       : []),
@@ -137,12 +141,19 @@ export function PanelAportanteClient() {
 
   if (!token) return null
 
+  const isVoluntario = Boolean(user?.roles?.includes("voluntario"))
+
   return (
     <DashboardShell
       title={`Hola, ${user?.name?.split(" ")[0] || "vecino"}`}
-      subtitle="Este es el resumen de los convites a los que te has sumado. Gracias por poner el hombro."
+      subtitle={
+        isVoluntario
+          ? "Panel de voluntariado: aporta y organiza en tus municipios. La moderación la hace el equipo moderador."
+          : "Este es el resumen de los convites a los que te has sumado. Gracias por poner el hombro."
+      }
       tabs={tabs}
     >
+      <VoluntarioTerritorioBanner user={user} />
       <div className="grid gap-4 sm:grid-cols-3">
         <StatTile
           label="Aportes activos"

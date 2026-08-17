@@ -65,15 +65,6 @@ export const CATEGORIAS: Record<Categoria, string> = {
   herramientas: "Herramientas",
 };
 
-export const ZONAS = [
-  "Dosquebradas",
-  "Pereira — Villa Santana",
-  "Pereira — Centro",
-  "Santa Rosa de Cabal",
-  "Marsella",
-  "La Virginia",
-];
-
 export const ESTADO_LABEL: Record<EstadoIniciativa, string> = {
   borrador: "Borrador",
   "en-revision": "En revisión",

@@ -111,11 +111,17 @@ function PanelMenu() {
   const dashItems = [
     { href: "/panel/aportante", label: "Panel aportante" },
     { href: "/panel/creador", label: "Panel organizador" },
+    ...(hasPermission("profesional_perfil.view_own")
+      ? [{ href: "/panel/profesional", label: "Panel profesional" }]
+      : []),
     ...(hasPermission("iniciativas.moderate")
       ? [{ href: "/moderacion", label: "Moderación" }]
       : []),
     ...(hasPermission("users.manage")
-      ? [{ href: "/admin", label: "Administración" }]
+      ? [
+          { href: "/admin", label: "Administración" },
+          { href: "/admin/convites", label: "Auditoría convites" },
+        ]
       : []),
   ]
 

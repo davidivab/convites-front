@@ -34,6 +34,8 @@ const nextConfig: NextConfig = {
         port: "8095",
         pathname: "/storage/**",
       },
+      // S3 / CDN (P23 + P27 URLs absolutas)
+      { protocol: "https", hostname: "*.amazonaws.com", pathname: "/**" },
     ],
   },
   async headers() {

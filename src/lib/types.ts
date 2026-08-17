@@ -149,6 +149,13 @@ export type ApiCentro = {
   zona: { id: number; slug: string; nombre: string } | null;
 };
 
+export type ApiProfesionalDocumento = {
+  id: number;
+  nombre_original: string;
+  mime: string | null;
+  url: string | null;
+};
+
 export type ApiProfesional = {
   id: number;
   area: string;
@@ -165,6 +172,8 @@ export type ApiProfesional = {
   email: string | null;
   celular: string | null;
   zona: { id: number; slug: string; nombre: string } | null;
+  /** Solo dueño o moderador (P31) */
+  documentos?: ApiProfesionalDocumento[] | null;
 };
 
 export type Paginated<T> = {

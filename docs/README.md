@@ -1,11 +1,21 @@
 # Flujo de mejoras (front)
 
-Ver también `../convites/docs/README.md` en el repo API (misma convención).
+Ver `OBJETIVO.md` y `../convites/docs/README.md` (API).
+
+| Agente | Repo de trabajo |
+|--------|-----------------|
+| **Cursor** | `convites-front` (este) |
+| **Claude** | `convites` (API) |
+
+IDs front: `F#`. Cruzar dependencias en `convites/docs/pendientes.md`.
 
 | Archivo | Uso |
 |---------|-----|
-| `pendientes.md` | Cola de mejoras UI/UX |
+| `OBJETIVO.md` | Roles / meta |
+| `pendientes.md` | Cola UI/UX |
 | `enproceso.md` | En curso |
 | `finalizados.md` | Hecho |
 
-El agente trabajador revisa cada ~10 min durante **5 horas** (~30 ciclos) y avanza ítems de usabilidad primero.
+Loop: **10 min × 5 h**. Preferir usabilidad por rol.
+**Autorizado:** npm, Docker front; migraciones/seed vía Claude o local si hace falta.
+Sin commit salvo pedido.

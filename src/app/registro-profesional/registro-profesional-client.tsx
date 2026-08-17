@@ -45,9 +45,11 @@ const MODALIDADES = [
 ] as const
 
 const TIPOS_ACEPTADOS = ".pdf,.jpg,.jpeg,.png"
-const MAX_MB = 10
+/** Alineado con RegisterProfesionalRequest (máx 5MB c/u, hasta 5) */
+const MAX_MB = 5
+const MAX_ARCHIVOS = 5
 
-type Archivo = { id: string; nombre: string; tamano: number }
+type Archivo = { id: string; nombre: string; tamano: number; file: File }
 
 function formatoTamano(bytes: number) {
   if (bytes < 1024) return `${bytes} B`
@@ -73,7 +75,6 @@ export function RegistroProfesionalClient() {
   const [disponibilidad, setDisponibilidad] = useState("")
   const [descripcion, setDescripcion] = useState("")
 
-  // Certificados (UI; el API aún no recibe archivos en este endpoint)
   const [archivos, setArchivos] = useState<Archivo[]>([])
   const [acepta, setAcepta] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -88,19 +89,27 @@ export function RegistroProfesionalClient() {
   function agregarArchivos(fileList: FileList | null) {
     if (!fileList) return
     setError("")
-    const nuevos: Archivo[] = []
-    for (const f of Array.from(fileList)) {
-      if (f.size > MAX_MB * 1024 * 1024) {
-        setError(`"${f.name}" supera el límite de ${MAX_MB} MB.`)
-        continue
+    setArchivos((prev) => {
+      const cupo = MAX_ARCHIVOS - prev.length
+      if (cupo <= 0) {
+        setError(`Máximo ${MAX_ARCHIVOS} archivos.`)
+        return prev
       }
-      nuevos.push({
-        id: `${f.name}-${f.size}-${crypto.randomUUID()}`,
-        nombre: f.name,
-        tamano: f.size,
-      })
-    }
-    setArchivos((prev) => [...prev, ...nuevos])
+      const nuevos: Archivo[] = []
+      for (const f of Array.from(fileList).slice(0, cupo)) {
+        if (f.size > MAX_MB * 1024 * 1024) {
+          setError(`"${f.name}" supera el límite de ${MAX_MB} MB.`)
+          continue
+        }
+        nuevos.push({
+          id: `${f.name}-${f.size}-${crypto.randomUUID()}`,
+          nombre: f.name,
+          tamano: f.size,
+          file: f,
+        })
+      }
+      return [...prev, ...nuevos]
+    })
   }
 
   function quitar(id: string) {
@@ -117,8 +126,7 @@ export function RegistroProfesionalClient() {
     modalidad &&
     disponibilidad.trim() &&
     descripcion.trim()
-  const certificadosOk = archivos.length > 0
-  const puedeEnviar = Boolean(datosOk && certificadosOk && acepta && token && !submitting)
+  const puedeEnviar = Boolean(datosOk && acepta && token && !submitting)
 
   async function onEnviar() {
     if (!puedeEnviar || !token) return
@@ -136,6 +144,7 @@ export function RegistroProfesionalClient() {
         modalidad,
         disponibilidad: disponibilidad.trim(),
         descripcion: descripcion.trim(),
+        documentos: archivos.map((a) => a.file),
       })
       setDone(true)
     } catch (err) {
@@ -335,11 +344,9 @@ export function RegistroProfesionalClient() {
                 Verificación obligatoria
               </p>
               <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                Adjunta al menos un documento que te autorice como profesional:
-                diploma, acta de grado o tarjeta profesional. Por ahora el
-                registro se envía sin archivos; el equipo te pedirá los
-                documentos por correo si hace falta. PDF o imagen, hasta{" "}
-                {MAX_MB} MB cada uno.
+                Adjunta diploma, acta de grado o tarjeta profesional (opcional
+                en el envío; el equipo puede pedirlos después). PDF o imagen,
+                hasta {MAX_MB} MB cada uno, máximo {MAX_ARCHIVOS} archivos.
               </p>
             </div>
           </div>
@@ -347,17 +354,19 @@ export function RegistroProfesionalClient() {
           <div className="flex items-center justify-between">
             <Label className="text-sm font-medium text-foreground">
               Certificados{" "}
-              <span className="font-normal text-destructive">*</span>
+              <span className="font-normal text-muted-foreground">(opcional)</span>
             </Label>
             <span className="text-xs text-muted-foreground">
-              {archivos.length} adjunto{archivos.length === 1 ? "" : "s"}
+              {archivos.length}/{MAX_ARCHIVOS} adjunto
+              {archivos.length === 1 ? "" : "s"}
             </span>
           </div>
 
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
-            className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-background px-4 py-8 text-center transition-colors hover:border-primary/50 hover:bg-primary/5"
+            disabled={archivos.length >= MAX_ARCHIVOS}
+            className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-background px-4 py-8 text-center transition-colors hover:border-primary/50 hover:bg-primary/5 disabled:pointer-events-none disabled:opacity-50"
           >
             <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
               <Upload className="h-5 w-5" />

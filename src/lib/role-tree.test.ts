@@ -42,12 +42,35 @@ describe("resolvePrimaryRole", () => {
       resolvePrimaryRole(user({ roles: ["member"], permissions: ["aportes.create"] })),
     ).toBe("aportante")
   })
+
+  it("member+profesional sigue en árbol aportante (aditivo)", () => {
+    expect(
+      resolvePrimaryRole(
+        user({
+          roles: ["member", "profesional"],
+          permissions: ["aportes.create", "profesional_perfil.view_own"],
+        }),
+      ),
+    ).toBe("aportante")
+  })
+
+  it("profesional puro va a su panel", () => {
+    expect(
+      resolvePrimaryRole(
+        user({
+          roles: ["profesional"],
+          permissions: ["profesional_perfil.view_own"],
+        }),
+      ),
+    ).toBe("profesional")
+  })
 })
 
 describe("homeForRole", () => {
   const cases: [RoleTree, string][] = [
     ["admin", "/admin"],
     ["moderador", "/moderacion"],
+    ["profesional", "/panel/profesional"],
     ["aportante", "/panel/aportante"],
   ]
   it.each(cases)("%s → %s", (role, home) => {

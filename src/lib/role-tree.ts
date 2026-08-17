@@ -1,7 +1,12 @@
 import type { AuthUser } from "@/lib/types"
 
-/** Árboles de rutas por rol (admin > moderador > aportante). */
-export type RoleTree = "admin" | "moderador" | "aportante"
+/**
+ * Árboles de rutas por rol.
+ * Jerarquía: admin > moderador > aportante.
+ * `profesional` es aditivo (member+profesional): puede usar /panel/profesional
+ * sin perder el árbol aportante.
+ */
+export type RoleTree = "admin" | "moderador" | "aportante" | "profesional"
 
 export function resolvePrimaryRole(user: AuthUser | null | undefined): RoleTree | null {
   if (!user) return null
@@ -14,6 +19,14 @@ export function resolvePrimaryRole(user: AuthUser | null | undefined): RoleTree 
   ) {
     return "moderador"
   }
+  // Solo profesional puro (sin member/voluntario) → home en su panel.
+  if (
+    user.roles.includes("profesional") &&
+    !user.roles.includes("member") &&
+    !user.roles.includes("voluntario")
+  ) {
+    return "profesional"
+  }
   return "aportante"
 }
 
@@ -23,9 +36,18 @@ export function homeForRole(role: RoleTree): string {
       return "/admin"
     case "moderador":
       return "/moderacion"
+    case "profesional":
+      return "/panel/profesional"
     default:
       return "/panel/aportante"
   }
+}
+
+export function canAccessProfesionalPanel(user: AuthUser | null | undefined): boolean {
+  return Boolean(
+    user?.permissions?.includes("profesional_perfil.view_own") ||
+      user?.roles?.includes("profesional"),
+  )
 }
 
 /** Rutas del panel de aportante/creador — no para admin ni moderador. */

@@ -64,12 +64,27 @@ export function ProfesionalesClient({
             psicológico, asesoría legal, evaluación de estructuras y planes de nutrición para
             quienes lo necesitan.
           </p>
-          <div className="mt-6">
+          <div className="mt-6 flex flex-wrap gap-3">
             <Button size="lg" render={<Link href="/registro-profesional" />}>
               <HandHeart className="size-4" />
               Registrarme como profesional
             </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              render={<Link href="/ingresar?next=/manos-profesionales" />}
+            >
+              Ya tengo cuenta
+            </Button>
           </div>
+          {process.env.NODE_ENV !== "production" ? (
+            <p className="mt-4 max-w-xl text-xs text-muted-foreground">
+              Demo:{" "}
+              <code className="rounded bg-muted px-1">aportante1@convites.test</code>{" "}
+              / password — perfil profesional vinculado (Laura Cardona). Panel
+              propio del rol llega con API P29.
+            </p>
+          ) : null}
         </div>
       </section>
 
