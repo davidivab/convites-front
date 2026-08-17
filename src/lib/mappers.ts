@@ -72,6 +72,18 @@ export function mapIniciativa(api: ApiIniciativa): Iniciativa {
     lat: api.ubicacion?.lat ?? null,
     lng: api.ubicacion?.lng ?? null,
     items,
+    puntosAcopio: (api.puntos_acopio ?? []).map((p) => ({
+      id: String(p.id),
+      nombre: p.nombre,
+      direccion: p.direccion,
+      horario: p.horario,
+      contacto: p.contacto,
+      ciudad: p.municipio
+        ? p.municipio.departamento
+          ? `${p.municipio.nombre}, ${p.municipio.departamento.nombre}`
+          : p.municipio.nombre
+        : "Sin ciudad",
+    })),
     ayudantes: [],
     asistentes: api.asistentes_count ?? 0,
     progreso: api.progreso ?? 0,

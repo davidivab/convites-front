@@ -49,6 +49,26 @@ export type ApiIniciativaItem = {
   orden: number;
 };
 
+/** Punto de recolección (puede ser otra ciudad que el destino del convite) */
+export type ApiPuntoAcopio = {
+  id: number;
+  nombre: string;
+  direccion: string;
+  horario: string | null;
+  contacto: string | null;
+  notas: string | null;
+  orden: number;
+  lat: number | null;
+  lng: number | null;
+  centro_id: number | null;
+  municipio: {
+    id: number;
+    slug: string;
+    nombre: string;
+    departamento?: { id: number; slug: string; nombre: string } | null;
+  } | null;
+};
+
 export type ApiIniciativa = {
   id: number;
   slug: string;
@@ -83,6 +103,7 @@ export type ApiIniciativa = {
   creador: { id: number; name: string; inicial: string | null } | null;
   enlace_externo: { plataforma: string; url: string } | null;
   items: ApiIniciativaItem[];
+  puntos_acopio?: ApiPuntoAcopio[];
   asistentes_count: number;
   progreso: number;
   /** Optimistic lock — reenviar en PUT /iniciativas/{id} */
@@ -106,6 +127,12 @@ export type ApiAporte = {
     id: number | null;
     name: string;
     inicial: string | null;
+  } | null;
+  punto_acopio?: {
+    id: number;
+    nombre: string;
+    direccion?: string | null;
+    municipio?: { id: number; nombre: string; slug?: string } | null;
   } | null;
   evidencia?: {
     url: string;

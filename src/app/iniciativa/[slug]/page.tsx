@@ -147,6 +147,45 @@ export default async function IniciativaPage({
                 </div>
               </section>
 
+              {(ini.puntosAcopio?.length ?? 0) > 0 ? (
+                <section className="mt-8">
+                  <h2 className="font-serif text-2xl font-semibold text-foreground">
+                    Puntos de acopio
+                  </h2>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                    El convite es en {ini.zona}. También puedes dejar aportes en
+                    estos puntos de otras ciudades:
+                  </p>
+                  <ul className="mt-4 space-y-3">
+                    {ini.puntosAcopio!.map((p) => (
+                      <li
+                        key={p.id}
+                        className="rounded-xl border border-border bg-card p-4"
+                      >
+                        <p className="font-medium text-foreground">{p.nombre}</p>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {p.ciudad}
+                        </p>
+                        <p className="mt-1 flex items-start gap-1.5 text-sm text-foreground">
+                          <MapPin className="mt-0.5 size-3.5 shrink-0 text-primary" />
+                          {p.direccion}
+                        </p>
+                        {p.horario ? (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Horario: {p.horario}
+                          </p>
+                        ) : null}
+                        {p.contacto ? (
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            Contacto: {p.contacto}
+                          </p>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+
               {typeof ini.lat === "number" && typeof ini.lng === "number" ? (
                 <IniciativaMapSection
                   lat={ini.lat}

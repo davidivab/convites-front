@@ -48,6 +48,14 @@ export type Iniciativa = {
   lat?: number | null;
   lng?: number | null;
   items: ItemNecesario[];
+  puntosAcopio?: Array<{
+    id: string;
+    nombre: string;
+    direccion: string;
+    horario: string | null;
+    contacto: string | null;
+    ciudad: string;
+  }>;
   ayudantes: Ayudante[];
   asistentes: number;
   progreso?: number;

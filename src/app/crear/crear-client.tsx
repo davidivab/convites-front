@@ -102,6 +102,16 @@ export function CrearClient() {
   const [items, setItems] = useState<NeededItem[]>([
     { id: "1", name: "", unit: "", quantity: "" },
   ])
+  type PuntoDraft = {
+    id: string
+    municipioId: string
+    municipioNombre: string
+    nombre: string
+    direccion: string
+    horario: string
+    contacto: string
+  }
+  const [puntosAcopio, setPuntosAcopio] = useState<PuntoDraft[]>([])
   const [responsable, setResponsable] = useState("")
   const [respaldo, setRespaldo] = useState("")
   const [contacto, setContacto] = useState("")
@@ -212,6 +222,19 @@ export function CrearClient() {
       (it) => it.name.trim() && it.unit.trim() && Number(it.quantity) > 0,
     )
 
+    const incompletePunto = puntosAcopio.find(
+      (p) =>
+        !p.municipioId ||
+        !p.nombre.trim() ||
+        !p.direccion.trim(),
+    )
+    if (incompletePunto) {
+      setError(
+        "Completa municipio, nombre y dirección de cada punto de acopio, o quítalo.",
+      )
+      return
+    }
+
     const historiaParrafos = story
       .split(/\n+/)
       .map((p) => p.trim())
@@ -247,6 +270,18 @@ export function CrearClient() {
           unidad: it.unit.trim(),
           cantidad_meta: Number(it.quantity),
         })),
+        puntos_acopio: puntosAcopio
+          .filter(
+            (p) =>
+              p.municipioId && p.nombre.trim() && p.direccion.trim(),
+          )
+          .map((p) => ({
+            municipio_id: Number(p.municipioId),
+            nombre: p.nombre.trim(),
+            direccion: p.direccion.trim(),
+            horario: p.horario.trim() || null,
+            contacto: p.contacto.trim() || null,
+          })),
       })
       await enviarRevision(token, created.id)
       router.push("/panel/creador")
@@ -440,6 +475,167 @@ export function CrearClient() {
             </div>
 
             <LocationPicker value={ubicacion} onChange={setUbicacion} />
+
+            <div className="space-y-4 border-t border-border pt-6">
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  Puntos de acopio en otras ciudades{" "}
+                  <span className="font-normal text-muted-foreground">
+                    (opcional)
+                  </span>
+                </p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  El convite es para {municipioNombre !== "—" ? municipioNombre : "este municipio"}.
+                  Si la gente puede dejar ayudas en Bogotá, Medellín u otra
+                  ciudad, agrégalas aquí.
+                </p>
+              </div>
+
+              {puntosAcopio.map((p, idx) => (
+                <div
+                  key={p.id}
+                  className="space-y-4 rounded-xl border border-border bg-background p-4"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-medium text-foreground">
+                      Punto {idx + 1}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPuntosAcopio((prev) =>
+                          prev.filter((x) => x.id !== p.id),
+                        )
+                      }
+                      className="rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive"
+                      aria-label={`Quitar punto ${idx + 1}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <DepartamentoMunicipioSelect
+                    municipioId={p.municipioId}
+                    onMunicipioChange={(id, nombre) =>
+                      setPuntosAcopio((prev) =>
+                        prev.map((x) =>
+                          x.id === p.id
+                            ? {
+                                ...x,
+                                municipioId: id,
+                                municipioNombre: nombre || "",
+                              }
+                            : x,
+                        ),
+                      )
+                    }
+                    incluirInactivos
+                    required
+                    departamentoLabel="Departamento del punto"
+                    municipioLabel="Ciudad / municipio del punto"
+                  />
+                  <div className="space-y-2">
+                    <Label htmlFor={`punto-nombre-${p.id}`}>
+                      Nombre del sitio
+                    </Label>
+                    <Input
+                      id={`punto-nombre-${p.id}`}
+                      placeholder="Ej: Acopio Bogotá Norte"
+                      value={p.nombre}
+                      onChange={(e) =>
+                        setPuntosAcopio((prev) =>
+                          prev.map((x) =>
+                            x.id === p.id
+                              ? { ...x, nombre: e.target.value }
+                              : x,
+                          ),
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor={`punto-dir-${p.id}`}>Dirección</Label>
+                    <Input
+                      id={`punto-dir-${p.id}`}
+                      placeholder="Calle, barrio, referencia"
+                      value={p.direccion}
+                      onChange={(e) =>
+                        setPuntosAcopio((prev) =>
+                          prev.map((x) =>
+                            x.id === p.id
+                              ? { ...x, direccion: e.target.value }
+                              : x,
+                          ),
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor={`punto-hor-${p.id}`}>
+                        Horario (opcional)
+                      </Label>
+                      <Input
+                        id={`punto-hor-${p.id}`}
+                        placeholder="Lun–Vie 9–17"
+                        value={p.horario}
+                        onChange={(e) =>
+                          setPuntosAcopio((prev) =>
+                            prev.map((x) =>
+                              x.id === p.id
+                                ? { ...x, horario: e.target.value }
+                                : x,
+                            ),
+                          )
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`punto-cel-${p.id}`}>
+                        Contacto (opcional)
+                      </Label>
+                      <Input
+                        id={`punto-cel-${p.id}`}
+                        placeholder="Celular o nombre"
+                        value={p.contacto}
+                        onChange={(e) =>
+                          setPuntosAcopio((prev) =>
+                            prev.map((x) =>
+                              x.id === p.id
+                                ? { ...x, contacto: e.target.value }
+                                : x,
+                            ),
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {puntosAcopio.length < 20 ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() =>
+                    setPuntosAcopio((prev) => [
+                      ...prev,
+                      {
+                        id: crypto.randomUUID(),
+                        municipioId: "",
+                        municipioNombre: "",
+                        nombre: "",
+                        direccion: "",
+                        horario: "",
+                        contacto: "",
+                      },
+                    ])
+                  }
+                >
+                  <Plus className="mr-1.5 h-4 w-4" />
+                  Agregar punto de acopio
+                </Button>
+              ) : null}
+            </div>
 
             <div className="grid gap-5 sm:grid-cols-2">
               <div className="space-y-2">

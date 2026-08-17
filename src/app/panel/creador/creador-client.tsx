@@ -24,6 +24,7 @@ import {
   ArrowUpRight,
   Users,
   Camera,
+  MapPin,
 } from "lucide-react"
 
 export function PanelCreadorClient() {
@@ -312,6 +313,33 @@ export function PanelCreadorClient() {
                   ) : null}
                 </div>
 
+                {(ini.puntosAcopio?.length ?? 0) > 0 ? (
+                  <div className="mt-5 rounded-lg border border-border bg-background/60 p-4">
+                    <p className="text-sm font-semibold text-foreground">
+                      Puntos de acopio ({ini.puntosAcopio!.length})
+                    </p>
+                    <ul className="mt-2 space-y-2">
+                      {ini.puntosAcopio!.map((p) => (
+                        <li
+                          key={p.id}
+                          className="text-sm text-muted-foreground"
+                        >
+                          <span className="font-medium text-foreground">
+                            {p.nombre}
+                          </span>
+                          {" · "}
+                          {p.ciudad}
+                          <span className="mt-0.5 flex items-start gap-1">
+                            <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                            {p.direccion}
+                            {p.horario ? ` · ${p.horario}` : ""}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
                 {aportantes ? (
                   <div className="mt-6 border-t border-border pt-5">
                     <h4 className="mb-3 text-sm font-semibold text-foreground">
@@ -381,6 +409,15 @@ function AportanteRow({
             {itemsLabel || (aporte.asiste_al_convite ? "Solo asistencia" : "Sin ítems")}
             {aporte.asiste_al_convite && itemsLabel ? " · Asiste al convite" : ""}
           </p>
+          {aporte.punto_acopio ? (
+            <p className="mt-1 flex items-start gap-1 text-xs text-muted-foreground">
+              <MapPin className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
+              Entrega en: {aporte.punto_acopio.nombre}
+              {aporte.punto_acopio.municipio?.nombre
+                ? ` (${aporte.punto_acopio.municipio.nombre})`
+                : ""}
+            </p>
+          ) : null}
           <p className="mt-1 text-xs text-muted-foreground">
             Estado: {aporte.estado_label ?? aporte.estado}
             {aporte.evidencia?.url ? (

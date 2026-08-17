@@ -5,6 +5,19 @@ Sesión agente 2026-08-16 (loop 5h + trabajo previo en la misma chat).
 
 ---
 
+### [P35] Smoke aporte con punto de acopio — 2026-08-17
+- Confirmado service: aportante2 → Quibdó demo con punto Bogotá; selector F7 ya cableado
+
+### [F8] Panel creador: puntos de acopio + demo Quibdó — 2026-08-17
+- Lista puntos en cada convite del panel; aportantes muestran `punto_acopio` si viene del API
+- Demo seed: `techos-para-quibdo-acopio-remoto` (2 puntos) confirmado en BD
+- Ack P34 Listo
+
+### [F6]+[F7] Puntos de acopio en crear / detalle / aportar — 2026-08-17
+- `/crear`: sección opcional multi-ciudad (`incluirInactivos`); envía `puntos_acopio[]`
+- Ficha iniciativa: lista puntos; aportar: selector opcional `punto_acopio_id` (espera P35 API)
+- Mapper + tipos `ApiPuntoAcopio`
+
 ### [P31] Upload certificados en registro profesional — 2026-08-17
 - `registrarProfesional` envía multipart `documentos[]` (PDF/JPG/PNG, máx 5×5MB)
 - UI guarda `File`, copy alineado con API; panel profesional lista certificados con link

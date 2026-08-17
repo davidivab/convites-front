@@ -24,6 +24,7 @@ export function AportarClient({ iniciativa }: { iniciativa: Iniciativa }) {
   const [cantidades, setCantidades] = useState<Record<string, number>>({});
   const [asisto, setAsisto] = useState(true);
   const [anonimo, setAnonimo] = useState(false);
+  const [puntoAcopioId, setPuntoAcopioId] = useState<string>("");
   const [confirmado, setConfirmado] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +58,9 @@ export function AportarClient({ iniciativa }: { iniciativa: Iniciativa }) {
       await crearAporte(token, iniciativa.id, {
         asiste_al_convite: asisto,
         anonimo,
+        ...(puntoAcopioId
+          ? { punto_acopio_id: Number(puntoAcopioId) }
+          : {}),
         client_request_id:
           typeof crypto !== "undefined" && "randomUUID" in crypto
             ? crypto.randomUUID()
@@ -206,6 +210,53 @@ export function AportarClient({ iniciativa }: { iniciativa: Iniciativa }) {
           );
         })}
       </div>
+
+      {(iniciativa.puntosAcopio?.length ?? 0) > 0 ? (
+        <div className="mt-6 rounded-2xl border border-border bg-card p-4">
+          <p className="text-sm font-medium text-foreground">
+            ¿Dónde entregarás?{" "}
+            <span className="font-normal text-muted-foreground">(opcional)</span>
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            El convite es en {iniciativa.zona}. Si dejas el aporte en un punto
+            de otra ciudad, elige cuál:
+          </p>
+          <div className="mt-3 space-y-2">
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border px-3 py-2.5 has-[:checked]:border-primary/50 has-[:checked]:bg-primary/5">
+              <input
+                type="radio"
+                name="punto-acopio"
+                className="mt-1 accent-primary"
+                checked={puntoAcopioId === ""}
+                onChange={() => setPuntoAcopioId("")}
+              />
+              <span className="text-sm text-foreground">
+                En el lugar del convite / por acordar
+              </span>
+            </label>
+            {iniciativa.puntosAcopio!.map((p) => (
+              <label
+                key={p.id}
+                className="flex cursor-pointer items-start gap-3 rounded-xl border border-border px-3 py-2.5 has-[:checked]:border-primary/50 has-[:checked]:bg-primary/5"
+              >
+                <input
+                  type="radio"
+                  name="punto-acopio"
+                  className="mt-1 accent-primary"
+                  checked={puntoAcopioId === p.id}
+                  onChange={() => setPuntoAcopioId(p.id)}
+                />
+                <span className="text-sm">
+                  <span className="font-medium text-foreground">{p.nombre}</span>
+                  <span className="mt-0.5 block text-muted-foreground">
+                    {p.ciudad} · {p.direccion}
+                  </span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <button
         type="button"

@@ -2,4 +2,4 @@
 
 ## Activo
 
-_(libre — loop 5h Cursor front cerrado; colas vacías)_
+_(idle — epic acopio P33–P36 / F6–F8 cerrado)_

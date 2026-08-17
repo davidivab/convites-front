@@ -100,6 +100,7 @@ export async function crearAporte(
     asiste_al_convite?: boolean;
     nota?: string;
     anonimo?: boolean;
+    punto_acopio_id?: number;
     client_request_id?: string;
     items?: Array<{ iniciativa_item_id: number; cantidad: number }>;
   },
@@ -148,9 +149,13 @@ export async function cancelarAporte(token: string, aporteId: number) {
   );
 }
 
-export async function fetchDepartamentos(server = false): Promise<ApiDepartamento[]> {
+export async function fetchDepartamentos(
+  server = false,
+  opts?: { incluirInactivos?: boolean },
+): Promise<ApiDepartamento[]> {
+  const q = opts?.incluirInactivos ? "?incluir_inactivos=1" : "";
   const res = await apiFetch<{ data: ApiDepartamento[] }>(
-    "/api/catalogos/departamentos",
+    `/api/catalogos/departamentos${q}`,
     {},
     { server, revalidate: server ? 3600 : undefined },
   );
@@ -160,9 +165,14 @@ export async function fetchDepartamentos(server = false): Promise<ApiDepartament
 export async function fetchMunicipios(
   departamentoId: number,
   server = false,
+  opts?: { incluirInactivos?: boolean },
 ): Promise<ApiMunicipio[]> {
+  const params = new URLSearchParams({
+    departamento_id: String(departamentoId),
+  });
+  if (opts?.incluirInactivos) params.set("incluir_inactivos", "1");
   const res = await apiFetch<{ data: ApiMunicipio[] }>(
-    `/api/catalogos/municipios?departamento_id=${departamentoId}`,
+    `/api/catalogos/municipios?${params}`,
     {},
     { server, revalidate: server ? 3600 : undefined },
   );

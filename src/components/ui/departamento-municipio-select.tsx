@@ -21,10 +21,12 @@ type Props = {
   className?: string
   departamentoLabel?: string
   municipioLabel?: string
+  /** P33: puntos de acopio pueden usar municipios fuera del catálogo “activo” */
+  incluirInactivos?: boolean
 }
 
 /**
- * Selector en cascada: departamento activo → municipios de ese departamento.
+ * Selector en cascada: departamento → municipios de ese departamento.
  */
 export function DepartamentoMunicipioSelect({
   municipioId,
@@ -34,6 +36,7 @@ export function DepartamentoMunicipioSelect({
   className,
   departamentoLabel = "Departamento",
   municipioLabel = "Municipio",
+  incluirInactivos = false,
 }: Props) {
   const [departamentos, setDepartamentos] = useState<ApiDepartamento[]>([])
   const [municipios, setMunicipios] = useState<ApiMunicipio[]>([])
@@ -46,7 +49,7 @@ export function DepartamentoMunicipioSelect({
     async function load() {
       setLoadingDepts(true)
       try {
-        const data = await fetchDepartamentos(false)
+        const data = await fetchDepartamentos(false, { incluirInactivos })
         if (!cancelled) setDepartamentos(data)
       } catch {
         if (!cancelled) setDepartamentos([])
@@ -58,7 +61,7 @@ export function DepartamentoMunicipioSelect({
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [incluirInactivos])
 
   useEffect(() => {
     if (!departamentoId) {
@@ -69,7 +72,9 @@ export function DepartamentoMunicipioSelect({
     async function load() {
       setLoadingMun(true)
       try {
-        const data = await fetchMunicipios(Number(departamentoId), false)
+        const data = await fetchMunicipios(Number(departamentoId), false, {
+          incluirInactivos,
+        })
         if (!cancelled) setMunicipios(data)
       } catch {
         if (!cancelled) setMunicipios([])
@@ -81,7 +86,7 @@ export function DepartamentoMunicipioSelect({
     return () => {
       cancelled = true
     }
-  }, [departamentoId])
+  }, [departamentoId, incluirInactivos])
 
   function onDepartamentoChange(value: string | null) {
     const next = value ?? ""
