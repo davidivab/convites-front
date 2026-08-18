@@ -1,11 +1,13 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Suspense, useEffect, useMemo, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import {
   ArrowDown,
   ArrowUp,
+  ChevronLeft,
+  ChevronRight,
   Handshake,
   List,
   Map as MapIcon,
@@ -30,12 +32,13 @@ import { cn } from "@/lib/utils";
 import {
   CATEGORIAS,
   URGENCIA_LABEL,
-  progresoTotal,
   type Categoria,
   type Iniciativa,
   type Urgencia,
 } from "@/lib/data";
 import type { ApiMaterial } from "@/lib/types";
+import type { PageMeta } from "@/lib/convites-api";
+import type { GeoOption, MapaPin } from "./explorar-types";
 
 const ExplorarMap = dynamic(
   () => import("@/components/map/explorar-map").then((m) => m.ExplorarMap),
@@ -53,21 +56,33 @@ type FiltroUrgencia = Urgencia | "todas";
 type FiltroCategoria = Categoria | "todas";
 type Seccion = "convites" | "materiales";
 type Vista = "lista" | "mapa";
-type OrdenCampo = "fecha" | "porcentaje" | "nombre";
+type OrdenCampo = "fecha" | "avance" | "nombre";
 type OrdenDir = "asc" | "desc";
 
-type FiltrosDraft = {
+type Applied = {
+  seccion: Seccion;
+  vista: Vista;
   q: string;
-  zona: string;
-  categoria: FiltroCategoria;
-  urgencia: FiltroUrgencia;
+  geo: string;
+  categoria: FiltroCategoria | string;
+  urgencia: FiltroUrgencia | string;
+  orden: OrdenCampo;
+  dir: OrdenDir;
+  page: number;
+};
+
+type Draft = {
+  q: string;
+  geo: string;
+  categoria: string;
+  urgencia: string;
   orden: OrdenCampo;
   dir: OrdenDir;
 };
 
 const ORDEN_ITEMS = [
   { value: "fecha", label: "Fecha del convite" },
-  { value: "porcentaje", label: "Avance (%)" },
+  { value: "avance", label: "Avance (%)" },
   { value: "nombre", label: "Nombre" },
 ] as const;
 
@@ -87,147 +102,74 @@ const URGENCIA_ITEMS = [
   })),
 ];
 
-const FILTROS_LIMPIOS: FiltrosDraft = {
-  q: "",
-  zona: "todas",
-  categoria: "todas",
-  urgencia: "todas",
-  orden: "fecha",
-  dir: "asc",
-};
-
-function materialZona(m: ApiMaterial): string {
-  const mun = m.iniciativa.municipio;
-  if (mun?.nombre && mun.departamento?.nombre) {
-    return `${mun.nombre}, ${mun.departamento.nombre}`;
-  }
-  if (mun?.nombre) return mun.nombre;
-  return "Sin zona";
-}
-
-function parseSeccion(raw: string | null): Seccion {
-  return raw === "materiales" ? "materiales" : "convites";
-}
-
-function parseVista(raw: string | null): Vista {
-  return raw === "mapa" ? "mapa" : "lista";
-}
-
-function parseCategoria(raw: string | null): FiltroCategoria {
-  if (raw && raw in CATEGORIAS) return raw as Categoria;
-  return "todas";
-}
-
-function parseUrgencia(raw: string | null): FiltroUrgencia {
-  if (raw && raw in URGENCIA_LABEL) return raw as Urgencia;
-  return "todas";
-}
-
-function parseOrden(raw: string | null): OrdenCampo {
-  if (raw === "porcentaje" || raw === "nombre" || raw === "fecha") return raw;
-  return "fecha";
-}
-
-function parseDir(raw: string | null): OrdenDir {
-  return raw === "desc" ? "desc" : "asc";
-}
-
-function filtrosFromParams(sp: URLSearchParams): FiltrosDraft {
-  return {
-    q: (sp.get("q") ?? "").trim(),
-    zona: sp.get("zona")?.trim() || "todas",
-    categoria: parseCategoria(sp.get("categoria")),
-    urgencia: parseUrgencia(sp.get("urgencia")),
-    orden: parseOrden(sp.get("orden")),
-    dir: parseDir(sp.get("dir")),
-  };
-}
-
-function countFiltrosActivos(
-  f: FiltrosDraft,
-  opts: { incluirOrden: boolean },
-): number {
+function countActivos(a: Applied, incluirOrden: boolean): number {
   let n = 0;
-  if (f.q.trim()) n += 1;
-  if (f.zona !== "todas") n += 1;
-  if (f.categoria !== "todas") n += 1;
-  if (f.urgencia !== "todas") n += 1;
-  if (opts.incluirOrden) {
-    if (f.orden !== "fecha") n += 1;
-    if (f.dir !== "asc") n += 1;
+  if (a.q.trim()) n += 1;
+  if (a.geo !== "todas") n += 1;
+  if (a.categoria !== "todas") n += 1;
+  if (a.urgencia !== "todas") n += 1;
+  if (incluirOrden) {
+    if (a.orden !== "fecha") n += 1;
+    if (a.dir !== "asc") n += 1;
   }
   return n;
 }
 
-function buildExplorarQuery(opts: {
-  seccion: Seccion;
-  vista: Vista;
-  filtros: FiltrosDraft;
-}): string {
+function buildQuery(a: Omit<Applied, "page"> & { page?: number }): string {
   const next = new URLSearchParams();
-  if (opts.seccion !== "convites") next.set("seccion", opts.seccion);
-  if (opts.vista !== "lista") next.set("vista", opts.vista);
-
-  const q = opts.filtros.q.trim();
-  if (q) next.set("q", q);
-  if (opts.filtros.zona !== "todas") next.set("zona", opts.filtros.zona);
-  if (opts.filtros.categoria !== "todas") {
-    next.set("categoria", opts.filtros.categoria);
-  }
-  if (opts.filtros.urgencia !== "todas") {
-    next.set("urgencia", opts.filtros.urgencia);
-  }
-  if (opts.filtros.orden !== "fecha") next.set("orden", opts.filtros.orden);
-  if (opts.filtros.dir !== "asc") next.set("dir", opts.filtros.dir);
-
+  if (a.seccion !== "convites") next.set("seccion", a.seccion);
+  if (a.vista !== "lista") next.set("vista", a.vista);
+  if (a.q.trim()) next.set("q", a.q.trim());
+  if (a.geo !== "todas") next.set("geo", a.geo);
+  if (a.categoria !== "todas") next.set("categoria", a.categoria);
+  if (a.urgencia !== "todas") next.set("urgencia", a.urgencia);
+  if (a.orden !== "fecha") next.set("orden", a.orden);
+  if (a.dir !== "asc") next.set("dir", a.dir);
+  if (a.page && a.page > 1) next.set("page", String(a.page));
   const s = next.toString();
   return s ? `?${s}` : "";
 }
 
-export function ExplorarClient(props: {
-  iniciativas: Iniciativa[];
-  materiales: ApiMaterial[];
-}) {
-  return (
-    <Suspense
-      fallback={
-        <section className="mx-auto w-full max-w-6xl px-4 py-10 text-sm text-muted-foreground">
-          Cargando filtros…
-        </section>
-      }
-    >
-      <ExplorarClientInner {...props} />
-    </Suspense>
-  );
-}
-
-function ExplorarClientInner({
+export function ExplorarClient({
   iniciativas,
   materiales,
+  mapaPins,
+  meta,
+  geoOptions,
+  applied,
 }: {
   iniciativas: Iniciativa[];
   materiales: ApiMaterial[];
+  mapaPins: MapaPin[];
+  meta: PageMeta;
+  geoOptions: GeoOption[];
+  applied: Applied;
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
 
-  const seccion = parseSeccion(searchParams.get("seccion"));
-  const vista = parseVista(searchParams.get("vista"));
-  const aplicados = useMemo(
-    () => filtrosFromParams(searchParams),
-    [searchParams],
-  );
-
-  const [draft, setDraft] = useState<FiltrosDraft>(aplicados);
+  const [draft, setDraft] = useState<Draft>({
+    q: applied.q,
+    geo: applied.geo,
+    categoria: applied.categoria,
+    urgencia: applied.urgencia,
+    orden: applied.orden,
+    dir: applied.dir,
+  });
+  const [qBarra, setQBarra] = useState(applied.q);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  /** Búsqueda en barra (fuera del drawer); se aplica con Enter o Filtrar. */
-  const [qBarra, setQBarra] = useState(aplicados.q);
 
   useEffect(() => {
-    setDraft(aplicados);
-    setQBarra(aplicados.q);
-  }, [aplicados]);
+    setDraft({
+      q: applied.q,
+      geo: applied.geo,
+      categoria: applied.categoria,
+      urgencia: applied.urgencia,
+      orden: applied.orden,
+      dir: applied.dir,
+    });
+    setQBarra(applied.q);
+  }, [applied]);
 
   useEffect(() => {
     if (!drawerOpen) return;
@@ -235,8 +177,15 @@ function ExplorarClientInner({
     document.body.style.overflow = "hidden";
     function onKey(e: KeyboardEvent) {
       if (e.key !== "Escape") return;
-      setDraft(aplicados);
-      setQBarra(aplicados.q);
+      setDraft({
+        q: applied.q,
+        geo: applied.geo,
+        categoria: applied.categoria,
+        urgencia: applied.urgencia,
+        orden: applied.orden,
+        dir: applied.dir,
+      });
+      setQBarra(applied.q);
       setDrawerOpen(false);
     }
     window.addEventListener("keydown", onKey);
@@ -244,121 +193,97 @@ function ExplorarClientInner({
       document.body.style.overflow = prev;
       window.removeEventListener("keydown", onKey);
     };
-  }, [drawerOpen, aplicados]);
+  }, [drawerOpen, applied]);
 
-  const zonas = useMemo(() => {
-    const fromIni = iniciativas.map((i) => i.zona);
-    const fromMat = materiales.map(materialZona);
-    return Array.from(new Set([...fromIni, ...fromMat])).sort((a, b) =>
-      a.localeCompare(b, "es", { sensitivity: "base" }),
-    );
-  }, [iniciativas, materiales]);
+  const incluirOrden =
+    applied.seccion === "convites" && applied.vista === "lista";
+  const activos = countActivos(applied, incluirOrden);
 
-  const zonaItems = useMemo(
-    () => [
-      { value: "todas", label: "Todas las zonas" },
-      ...zonas.map((z) => ({ value: z, label: z })),
-    ],
-    [zonas],
-  );
-
-  const incluirOrden = seccion === "convites" && vista === "lista";
-  const activos = countFiltrosActivos(aplicados, { incluirOrden });
-
-  const resultados = useMemo(() => {
-    const { q, zona, categoria, urgencia, orden, dir } = aplicados;
-    const filtrados = iniciativas.filter((i) => {
-      const ql = q.toLowerCase();
-      const matchQuery =
-        ql === "" ||
-        i.titulo.toLowerCase().includes(ql) ||
-        i.resumen.toLowerCase().includes(ql) ||
-        i.zona.toLowerCase().includes(ql);
-      const matchZona = zona === "todas" || i.zona === zona;
-      const matchCat = categoria === "todas" || i.categoria === categoria;
-      const matchUrg = urgencia === "todas" || i.urgencia === urgencia;
-      return matchQuery && matchZona && matchCat && matchUrg;
-    });
-
-    const factor = dir === "asc" ? 1 : -1;
-    return [...filtrados].sort((a, b) => {
-      let cmp = 0;
-      if (orden === "nombre") {
-        cmp = a.titulo.localeCompare(b.titulo, "es", { sensitivity: "base" });
-      } else if (orden === "porcentaje") {
-        cmp = progresoTotal(a.items) - progresoTotal(b.items);
-      } else {
-        const ta = a.fechaISO ? new Date(a.fechaISO).getTime() : null;
-        const tb = b.fechaISO ? new Date(b.fechaISO).getTime() : null;
-        if (ta === null && tb === null) cmp = 0;
-        else if (ta === null) return 1;
-        else if (tb === null) return -1;
-        else cmp = ta - tb;
-      }
-      return cmp * factor;
-    });
-  }, [iniciativas, aplicados]);
-
-  const materialesFiltrados = useMemo(() => {
-    const { q, zona, categoria, urgencia } = aplicados;
-    const filtrados = materiales.filter((m) => {
-      const ql = q.toLowerCase();
-      const zonaStr = materialZona(m);
-      const matchQuery =
-        ql === "" ||
-        m.nombre.toLowerCase().includes(ql) ||
-        m.iniciativa.titulo.toLowerCase().includes(ql) ||
-        zonaStr.toLowerCase().includes(ql);
-      const matchZona = zona === "todas" || zonaStr === zona;
-      const catSlug = m.iniciativa.categoria?.slug;
-      const matchCat =
-        categoria === "todas" || (catSlug != null && catSlug === categoria);
-      const matchUrg =
-        urgencia === "todas" || m.iniciativa.urgencia === urgencia;
-      return matchQuery && matchZona && matchCat && matchUrg;
-    });
-
-    return [...filtrados].sort((a, b) =>
-      a.nombre.localeCompare(b.nombre, "es", { sensitivity: "base" }),
-    );
-  }, [materiales, aplicados]);
-
-  function pushState(next: {
-    seccion?: Seccion;
-    vista?: Vista;
-    filtros?: FiltrosDraft;
-  }) {
-    const qs = buildExplorarQuery({
-      seccion: next.seccion ?? seccion,
-      vista: next.vista ?? vista,
-      filtros: next.filtros ?? aplicados,
-    });
-    router.push(`${pathname}${qs}`);
+  function navigate(next: Partial<Applied>) {
+    const merged: Applied = {
+      ...applied,
+      ...next,
+      q: next.q !== undefined ? next.q : applied.q,
+    };
+    // Al cambiar filtros (no solo page), reset page
+    if (
+      next.page === undefined &&
+      (next.q !== undefined ||
+        next.geo !== undefined ||
+        next.categoria !== undefined ||
+        next.urgencia !== undefined ||
+        next.orden !== undefined ||
+        next.dir !== undefined ||
+        next.seccion !== undefined ||
+        next.vista !== undefined)
+    ) {
+      merged.page = 1;
+    }
+    router.push(`${pathname}${buildQuery(merged)}`);
   }
 
   function abrirDrawer() {
-    setDraft({ ...aplicados, q: qBarra });
+    setDraft({
+      q: qBarra,
+      geo: applied.geo,
+      categoria: applied.categoria,
+      urgencia: applied.urgencia,
+      orden: applied.orden,
+      dir: applied.dir,
+    });
     setDrawerOpen(true);
   }
 
   function cerrarDrawer() {
-    setDraft(aplicados);
-    setQBarra(aplicados.q);
+    setDraft({
+      q: applied.q,
+      geo: applied.geo,
+      categoria: applied.categoria,
+      urgencia: applied.urgencia,
+      orden: applied.orden,
+      dir: applied.dir,
+    });
+    setQBarra(applied.q);
     setDrawerOpen(false);
   }
 
-  function aplicarFiltros(filtros?: FiltrosDraft) {
-    const next = filtros ?? { ...draft, q: qBarra.trim() };
-    pushState({ filtros: next });
+  function aplicarFiltros() {
+    navigate({
+      q: qBarra.trim(),
+      geo: draft.geo,
+      categoria: draft.categoria,
+      urgencia: draft.urgencia,
+      orden: draft.orden,
+      dir: draft.dir,
+      page: 1,
+    });
     setDrawerOpen(false);
   }
 
   function limpiar() {
-    setDraft(FILTROS_LIMPIOS);
     setQBarra("");
-    pushState({ filtros: FILTROS_LIMPIOS });
+    setDraft({
+      q: "",
+      geo: "todas",
+      categoria: "todas",
+      urgencia: "todas",
+      orden: "fecha",
+      dir: "asc",
+    });
+    navigate({
+      q: "",
+      geo: "todas",
+      categoria: "todas",
+      urgencia: "todas",
+      orden: "fecha",
+      dir: "asc",
+      page: 1,
+    });
     setDrawerOpen(false);
   }
+
+  const showPager =
+    applied.vista !== "mapa" && meta.last_page > 1;
 
   return (
     <section className="mx-auto w-full max-w-6xl px-4 py-10">
@@ -367,11 +292,11 @@ function ExplorarClientInner({
           <div className="inline-flex w-fit rounded-xl border border-border bg-card p-1">
             <button
               type="button"
-              onClick={() => pushState({ seccion: "convites" })}
+              onClick={() => navigate({ seccion: "convites" })}
               aria-label="Convites"
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium",
-                seccion === "convites"
+                applied.seccion === "convites"
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground",
               )}
@@ -381,11 +306,11 @@ function ExplorarClientInner({
             </button>
             <button
               type="button"
-              onClick={() => pushState({ seccion: "materiales" })}
+              onClick={() => navigate({ seccion: "materiales", vista: "lista" })}
               aria-label="Materiales"
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium",
-                seccion === "materiales"
+                applied.seccion === "materiales"
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground",
               )}
@@ -395,15 +320,15 @@ function ExplorarClientInner({
             </button>
           </div>
 
-          {seccion === "convites" ? (
+          {applied.seccion === "convites" ? (
             <div className="inline-flex rounded-xl border border-border bg-card p-1">
               <button
                 type="button"
-                onClick={() => pushState({ vista: "lista" })}
+                onClick={() => navigate({ vista: "lista" })}
                 aria-label="Lista"
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium",
-                  vista === "lista"
+                  applied.vista === "lista"
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground",
                 )}
@@ -413,11 +338,11 @@ function ExplorarClientInner({
               </button>
               <button
                 type="button"
-                onClick={() => pushState({ vista: "mapa" })}
+                onClick={() => navigate({ vista: "mapa" })}
                 aria-label="Mapa"
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium",
-                  vista === "mapa"
+                  applied.vista === "mapa"
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground",
                 )}
@@ -433,26 +358,21 @@ function ExplorarClientInner({
           <div className="relative min-w-0 flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              id="explorar-q"
               type="search"
               value={qBarra}
               onChange={(e) => setQBarra(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
-                  aplicarFiltros({ ...aplicados, q: qBarra.trim() });
+                  navigate({ q: qBarra.trim(), page: 1 });
                 }
               }}
               placeholder={
-                seccion === "materiales"
+                applied.seccion === "materiales"
                   ? "Material, convite o zona…"
                   : "Nombre, zona o necesidad…"
               }
-              aria-label={
-                seccion === "materiales"
-                  ? "Buscar materiales"
-                  : "Buscar iniciativas"
-              }
+              aria-label="Buscar"
               className="h-11 pl-9"
             />
           </div>
@@ -483,22 +403,29 @@ function ExplorarClientInner({
           </div>
         </div>
 
-        {seccion === "convites" ? (
+        {applied.seccion === "convites" ? (
           <>
             <p className="text-sm text-muted-foreground">
-              {resultados.length} iniciativa
-              {resultados.length === 1 ? "" : "s"}
+              {meta.total} iniciativa{meta.total === 1 ? "" : "s"}
+              {showPager
+                ? ` · página ${meta.current_page} de ${meta.last_page}`
+                : null}
             </p>
 
-            {vista === "mapa" ? (
-              <ExplorarMap iniciativas={resultados} />
-            ) : resultados.length === 0 ? (
+            {applied.vista === "mapa" ? (
+              <ExplorarMap
+                pins={mapaPins.map((p) => ({
+                  ...p,
+                  zona: undefined,
+                }))}
+              />
+            ) : iniciativas.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">
                 No encontramos convites con esos filtros.
               </div>
             ) : (
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {resultados.map((ini) => (
+                {iniciativas.map((ini) => (
                   <CampaignCard key={ini.id} iniciativa={ini} />
                 ))}
               </div>
@@ -507,26 +434,56 @@ function ExplorarClientInner({
         ) : (
           <>
             <p className="text-sm text-muted-foreground">
-              {materialesFiltrados.length} material
-              {materialesFiltrados.length === 1 ? "" : "es"} que aún faltan
+              {meta.total} material{meta.total === 1 ? "" : "es"} que aún faltan
+              {showPager
+                ? ` · página ${meta.current_page} de ${meta.last_page}`
+                : null}
             </p>
             <p className="text-sm text-muted-foreground">
               ¿Tenés algo de esto? Entrá al convite y ofrecé tu aporte.
             </p>
 
-            {materialesFiltrados.length === 0 ? (
+            {materiales.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">
                 No encontramos materiales pendientes con esos filtros.
               </div>
             ) : (
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {materialesFiltrados.map((m) => (
+                {materiales.map((m) => (
                   <MaterialCard key={m.id} material={m} />
                 ))}
               </div>
             )}
           </>
         )}
+
+        {showPager ? (
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={meta.current_page <= 1}
+              onClick={() => navigate({ page: meta.current_page - 1 })}
+            >
+              <ChevronLeft className="size-4" />
+              Anterior
+            </Button>
+            <span className="text-sm tabular-nums text-muted-foreground">
+              {meta.current_page} / {meta.last_page}
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={meta.current_page >= meta.last_page}
+              onClick={() => navigate({ page: meta.current_page + 1 })}
+            >
+              Siguiente
+              <ChevronRight className="size-4" />
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       {drawerOpen ? (
@@ -564,20 +521,20 @@ function ExplorarClientInner({
 
             <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
               <div className="space-y-1.5">
-                <Label htmlFor="explorar-zona">Zona</Label>
+                <Label htmlFor="explorar-geo">Zona</Label>
                 <Select
-                  value={draft.zona}
+                  value={draft.geo}
                   onValueChange={(v) => {
                     if (v == null) return;
-                    setDraft((d) => ({ ...d, zona: v }));
+                    setDraft((d) => ({ ...d, geo: v }));
                   }}
-                  items={zonaItems}
+                  items={geoOptions}
                 >
-                  <SelectTrigger id="explorar-zona" className="w-full">
+                  <SelectTrigger id="explorar-geo" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {zonaItems.map((z) => (
+                    {geoOptions.map((z) => (
                       <SelectItem key={z.value} value={z.value}>
                         {z.label}
                       </SelectItem>
@@ -592,10 +549,7 @@ function ExplorarClientInner({
                   value={draft.categoria}
                   onValueChange={(v) => {
                     if (v == null) return;
-                    setDraft((d) => ({
-                      ...d,
-                      categoria: parseCategoria(v),
-                    }));
+                    setDraft((d) => ({ ...d, categoria: v }));
                   }}
                   items={CATEGORIA_ITEMS}
                 >
@@ -618,10 +572,7 @@ function ExplorarClientInner({
                   value={draft.urgencia}
                   onValueChange={(v) => {
                     if (v == null) return;
-                    setDraft((d) => ({
-                      ...d,
-                      urgencia: parseUrgencia(v),
-                    }));
+                    setDraft((d) => ({ ...d, urgencia: v }));
                   }}
                   items={URGENCIA_ITEMS}
                 >
@@ -646,7 +597,9 @@ function ExplorarClientInner({
                       value={draft.orden}
                       onValueChange={(v) => {
                         if (v == null) return;
-                        setDraft((d) => ({ ...d, orden: parseOrden(v) }));
+                        if (v === "fecha" || v === "avance" || v === "nombre") {
+                          setDraft((d) => ({ ...d, orden: v }));
+                        }
                       }}
                       items={[...ORDEN_ITEMS]}
                     >
@@ -690,19 +643,10 @@ function ExplorarClientInner({
             </div>
 
             <div className="flex flex-col gap-2 border-t border-border p-4">
-              <Button
-                type="button"
-                className="w-full"
-                onClick={() =>
-                  aplicarFiltros({ ...draft, q: qBarra.trim() })
-                }
-              >
+              <Button type="button" className="w-full" onClick={aplicarFiltros}>
                 Filtrar
               </Button>
-              {activos > 0 ||
-              draft.zona !== "todas" ||
-              draft.categoria !== "todas" ||
-              draft.urgencia !== "todas" ? (
+              {activos > 0 ? (
                 <Button
                   type="button"
                   variant="ghost"

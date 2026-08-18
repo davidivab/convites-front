@@ -5,6 +5,11 @@ Sesión agente 2026-08-16 (loop 5h + trabajo previo en la misma chat).
 
 ---
 
+### [F35] Explorar: filtros/orden/página vía API — 2026-08-18
+- SSR lee searchParams; re-fetch `iniciativas`/`materiales` con `q`, `geo`→zona|municipio slug, `categoria`, `urgencia`, `orden` (`avance`), `dir`, `page`
+- Paginador Anterior/Siguiente; mapa vía `/api/iniciativas/mapa` (+ fallback municipio → P49)
+- Drawer de filtros + badge; deja de filtrar en memoria
+
 ### [F33] Explorar: intro colapsable + filtros en selects/URL — 2026-08-18
 - Intro “Convites abiertos en Risaralda” oculta completa; chevron **fuera** de la section
 - Filtros: selects + botón Filtrar; estado en query (`q`, `zona`, `categoria`, `urgencia`, `orden`, `dir`, `seccion`, `vista`)

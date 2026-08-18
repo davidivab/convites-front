@@ -24,20 +24,58 @@ function authOpts(token?: string | null) {
 export async function fetchIniciativas(params?: {
   destacadas?: boolean;
   zona?: string;
+  municipio?: string;
+  departamento?: string;
   categoria?: string;
   urgencia?: string;
   q?: string;
+  orden?: "fecha" | "avance" | "nombre";
+  dir?: "asc" | "desc";
+  page?: number;
+  per_page?: number;
   token?: string | null;
   server?: boolean;
   revalidate?: number;
 }): Promise<Iniciativa[]> {
+  const res = await fetchIniciativasPage(params);
+  return res.data;
+}
+
+export type PageMeta = {
+  current_page: number;
+  last_page: number;
+  total: number;
+  per_page: number;
+};
+
+export async function fetchIniciativasPage(params?: {
+  destacadas?: boolean;
+  zona?: string;
+  municipio?: string;
+  departamento?: string;
+  categoria?: string;
+  urgencia?: string;
+  q?: string;
+  orden?: "fecha" | "avance" | "nombre";
+  dir?: "asc" | "desc";
+  page?: number;
+  per_page?: number;
+  token?: string | null;
+  server?: boolean;
+  revalidate?: number;
+}): Promise<{ data: Iniciativa[]; meta: PageMeta }> {
   const qs = new URLSearchParams();
   if (params?.destacadas) qs.set("destacadas", "1");
   if (params?.zona) qs.set("zona", params.zona);
+  if (params?.municipio) qs.set("municipio", params.municipio);
+  if (params?.departamento) qs.set("departamento", params.departamento);
   if (params?.categoria) qs.set("categoria", params.categoria);
   if (params?.urgencia) qs.set("urgencia", params.urgencia);
   if (params?.q) qs.set("q", params.q);
-  qs.set("per_page", "50");
+  if (params?.orden) qs.set("orden", params.orden);
+  if (params?.dir) qs.set("dir", params.dir);
+  qs.set("per_page", String(params?.per_page ?? 12));
+  if (params?.page) qs.set("page", String(params.page));
 
   const path = `/api/iniciativas?${qs.toString()}`;
   const res = await apiFetch<Paginated<ApiIniciativa>>(path, {}, {
@@ -45,7 +83,64 @@ export async function fetchIniciativas(params?: {
     token: params?.token,
     revalidate: params?.revalidate,
   });
-  return (res.data ?? []).map(mapIniciativa);
+  return {
+    data: (res.data ?? []).map(mapIniciativa),
+    meta: {
+      current_page: res.meta?.current_page ?? 1,
+      last_page: res.meta?.last_page ?? 1,
+      total: res.meta?.total ?? (res.data ?? []).length,
+      per_page: res.meta?.per_page ?? params?.per_page ?? 12,
+    },
+  };
+}
+
+/** Listado liviano para el mapa de /explorar (no paginado). */
+export async function fetchIniciativasMapa(params?: {
+  zona?: string;
+  categoria?: string;
+  urgencia?: string;
+  q?: string;
+  token?: string | null;
+  server?: boolean;
+}): Promise<
+  Array<{
+    id: string;
+    slug: string;
+    titulo: string;
+    urgencia?: string;
+    lat: number;
+    lng: number;
+    zonaNombre?: string;
+  }>
+> {
+  const qs = new URLSearchParams();
+  if (params?.zona) qs.set("zona", params.zona);
+  if (params?.categoria) qs.set("categoria", params.categoria);
+  if (params?.urgencia) qs.set("urgencia", params.urgencia);
+  if (params?.q) qs.set("q", params.q);
+  const res = await apiFetch<{
+    data: Array<{
+      id: number;
+      slug: string;
+      titulo: string;
+      urgencia?: string;
+      lat: number;
+      lng: number;
+      zona?: { nombre: string } | null;
+    }>;
+  }>(`/api/iniciativas/mapa?${qs.toString()}`, {}, {
+    server: params?.server,
+    token: params?.token,
+  });
+  return (res.data ?? []).map((row) => ({
+    id: String(row.id),
+    slug: row.slug,
+    titulo: row.titulo,
+    urgencia: row.urgencia,
+    lat: row.lat,
+    lng: row.lng,
+    zonaNombre: row.zona?.nombre,
+  }));
 }
 
 /** Búsqueda inversa: materiales que aún faltan en convites abiertos. */
@@ -56,12 +151,33 @@ export async function fetchMateriales(params?: {
   categoria?: string;
   urgencia?: string;
   q?: string;
+  orden?: "fecha" | "avance" | "nombre";
+  dir?: "asc" | "desc";
   per_page?: number;
   page?: number;
   token?: string | null;
   server?: boolean;
   revalidate?: number;
 }): Promise<ApiMaterial[]> {
+  const res = await fetchMaterialesPage(params);
+  return res.data;
+}
+
+export async function fetchMaterialesPage(params?: {
+  zona?: string;
+  municipio?: string;
+  departamento?: string;
+  categoria?: string;
+  urgencia?: string;
+  q?: string;
+  orden?: "fecha" | "avance" | "nombre";
+  dir?: "asc" | "desc";
+  per_page?: number;
+  page?: number;
+  token?: string | null;
+  server?: boolean;
+  revalidate?: number;
+}): Promise<{ data: ApiMaterial[]; meta: PageMeta }> {
   const qs = new URLSearchParams();
   if (params?.zona) qs.set("zona", params.zona);
   if (params?.municipio) qs.set("municipio", params.municipio);
@@ -69,7 +185,9 @@ export async function fetchMateriales(params?: {
   if (params?.categoria) qs.set("categoria", params.categoria);
   if (params?.urgencia) qs.set("urgencia", params.urgencia);
   if (params?.q) qs.set("q", params.q);
-  qs.set("per_page", String(params?.per_page ?? 50));
+  if (params?.orden) qs.set("orden", params.orden);
+  if (params?.dir) qs.set("dir", params.dir);
+  qs.set("per_page", String(params?.per_page ?? 12));
   if (params?.page) qs.set("page", String(params.page));
 
   const res = await apiFetch<Paginated<ApiMaterial>>(
@@ -81,7 +199,15 @@ export async function fetchMateriales(params?: {
       revalidate: params?.revalidate,
     },
   );
-  return res.data ?? [];
+  return {
+    data: res.data ?? [],
+    meta: {
+      current_page: res.meta?.current_page ?? 1,
+      last_page: res.meta?.last_page ?? 1,
+      total: res.meta?.total ?? (res.data ?? []).length,
+      per_page: res.meta?.per_page ?? params?.per_page ?? 12,
+    },
+  };
 }
 
 export async function fetchIniciativa(
