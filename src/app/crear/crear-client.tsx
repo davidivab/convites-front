@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useEffect, useRef, useState } from "react"
+import { Suspense, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useForm } from "react-hook-form"
@@ -138,9 +138,13 @@ export function CrearClient() {
 }
 
 function CrearClientInner() {
-  const { token, loading: authLoading } = useRequireAuth("/crear")
   const router = useRouter()
   const searchParams = useSearchParams()
+  const returnTo = useMemo(() => {
+    const qs = searchParams.toString()
+    return qs ? `/crear?${qs}` : "/crear"
+  }, [searchParams])
+  const { token, loading: authLoading } = useRequireAuth(returnTo)
   const slugParam = searchParams.get("slug")
   const pasoParam = searchParams.get("paso")
 
@@ -678,10 +682,26 @@ function CrearClientInner() {
     }
   }
 
-  if (authLoading || !token || loadingDraft) {
+  if (authLoading) {
     return (
       <div className="mx-auto max-w-3xl py-16 text-center text-sm text-muted-foreground">
-        {loadingDraft ? "Cargando borrador…" : "Comprobando sesión…"}
+        Comprobando sesión…
+      </div>
+    )
+  }
+
+  if (!token) {
+    return (
+      <div className="mx-auto max-w-3xl py-16 text-center text-sm text-muted-foreground">
+        Para abrir un convite necesitás ingresar. Te estamos llevando…
+      </div>
+    )
+  }
+
+  if (loadingDraft) {
+    return (
+      <div className="mx-auto max-w-3xl py-16 text-center text-sm text-muted-foreground">
+        Cargando borrador…
       </div>
     )
   }

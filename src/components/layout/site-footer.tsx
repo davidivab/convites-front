@@ -5,7 +5,7 @@ const LINKS = [
   {
     titulo: 'Plataforma',
     items: [
-      { href: '/explorar', label: 'Explorar convites' },
+      { href: '/convites', label: 'Ver convites' },
       { href: '/crear', label: 'Crear un convite' },
       { href: '/panel/aportante', label: 'Mi panel' },
     ],

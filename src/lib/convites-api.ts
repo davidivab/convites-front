@@ -94,7 +94,7 @@ export async function fetchIniciativasPage(params?: {
   };
 }
 
-/** Listado liviano para el mapa de /explorar (no paginado). */
+/** Listado liviano para el mapa de /convites (no paginado). */
 export async function fetchIniciativasMapa(params?: {
   zona?: string;
   categoria?: string;

@@ -3,7 +3,7 @@
 import { PageIntroSection } from "@/components/layout/page-intro-section";
 import { TrustBanner } from "@/components/layout/trust-banner";
 
-export function ExplorarIntro() {
+export function ConvitesIntro() {
   return (
     <PageIntroSection
       title="Convites abiertos en Risaralda"

@@ -17,7 +17,7 @@ type NavItem = NavLink | NavGroup;
 const isGroup = (item: NavItem): item is NavGroup => "items" in item;
 
 const NAV: NavItem[] = [
-  { href: "/explorar", label: "Explorar" },
+  { href: "/convites", label: "Ver convites" },
   {
     label: "Adicionales",
     items: [

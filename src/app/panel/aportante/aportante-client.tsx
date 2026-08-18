@@ -181,8 +181,8 @@ export function PanelAportanteClient() {
             <p className="mt-1 text-sm text-muted-foreground">
               Explora los convites abiertos y suma tu aporte.
             </p>
-            <Button className="mt-4" render={<Link href="/explorar" />}>
-              Explorar convites
+            <Button className="mt-4" render={<Link href="/convites" />}>
+              Ver convites
             </Button>
           </div>
         ) : (

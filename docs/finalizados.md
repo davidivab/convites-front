@@ -5,6 +5,10 @@ Sesión agente 2026-08-16 (loop 5h + trabajo previo en la misma chat).
 
 ---
 
+### [F36] Ruta `/explorar` → `/convites` (“Ver convites”) — 2026-08-18
+- App en `src/app/convites/`; redirect `/explorar` preservando query
+- Nav/footer/home/CTAs: “Ver convites”
+
 ### [F35] Explorar: filtros/orden/página vía API — 2026-08-18
 - SSR lee searchParams; re-fetch `iniciativas`/`materiales` con `q`, `geo`→zona|municipio slug, `categoria`, `urgencia`, `orden` (`avance`), `dir`, `page`
 - Paginador Anterior/Siguiente; mapa vía `/api/iniciativas/mapa` (+ fallback municipio → P49)

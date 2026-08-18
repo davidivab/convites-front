@@ -134,7 +134,7 @@ export function PerfilClient() {
             ) : historial.length === 0 ? (
               <p className="mt-4 text-sm text-muted-foreground">
                 Aún no tienes aportes.{" "}
-                <Link href="/explorar" className="underline underline-offset-2">
+                <Link href="/convites" className="underline underline-offset-2">
                   Explora convites
                 </Link>
                 .

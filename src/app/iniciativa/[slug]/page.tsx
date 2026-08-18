@@ -43,7 +43,7 @@ export default async function IniciativaPage({
       <main className="flex-1">
         <div className="mx-auto w-full max-w-6xl px-4 pt-6">
           <Link
-            href="/explorar"
+            href="/convites"
             className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
             <ArrowLeft className="size-4" />

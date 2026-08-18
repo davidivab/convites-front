@@ -80,9 +80,9 @@ export default async function HomePage() {
                   variant="outline"
                   size="lg"
                   className="h-12 border-background/30 bg-background/10 px-6 text-base text-background backdrop-blur-sm hover:bg-background/20 hover:text-background"
-                  render={<Link href="/explorar" />}
+                  render={<Link href="/convites" />}
                 >
-                  Explorar convites
+                  Ver convites
                 </Button>
               </div>
             </div>
@@ -106,7 +106,7 @@ export default async function HomePage() {
                 Convites que necesitan manos ahora
               </h2>
             </div>
-            <Button variant="outline" render={<Link href="/explorar" />}>
+            <Button variant="outline" render={<Link href="/convites" />}>
               Ver todas
               <ArrowRight data-icon="inline-end" />
             </Button>

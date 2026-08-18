@@ -38,10 +38,10 @@ import {
 } from "@/lib/data";
 import type { ApiMaterial } from "@/lib/types";
 import type { PageMeta } from "@/lib/convites-api";
-import type { GeoOption, MapaPin } from "./explorar-types";
+import type { GeoOption, MapaPin } from "./convites-types";
 
-const ExplorarMap = dynamic(
-  () => import("@/components/map/explorar-map").then((m) => m.ExplorarMap),
+const ConvitesMap = dynamic(
+  () => import("@/components/map/convites-map").then((m) => m.ConvitesMap),
   {
     ssr: false,
     loading: () => (
@@ -130,7 +130,7 @@ function buildQuery(a: Omit<Applied, "page"> & { page?: number }): string {
   return s ? `?${s}` : "";
 }
 
-export function ExplorarClient({
+export function ConvitesClient({
   iniciativas,
   materiales,
   mapaPins,
@@ -195,8 +195,7 @@ export function ExplorarClient({
     };
   }, [drawerOpen, applied]);
 
-  const incluirOrden =
-    applied.seccion === "convites" && applied.vista === "lista";
+  const incluirOrden = applied.vista === "lista";
   const activos = countActivos(applied, incluirOrden);
 
   function navigate(next: Partial<Applied>) {
@@ -306,7 +305,7 @@ export function ExplorarClient({
             </button>
             <button
               type="button"
-              onClick={() => navigate({ seccion: "materiales", vista: "lista" })}
+              onClick={() => navigate({ seccion: "materiales" })}
               aria-label="Materiales"
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium",
@@ -320,38 +319,36 @@ export function ExplorarClient({
             </button>
           </div>
 
-          {applied.seccion === "convites" ? (
-            <div className="inline-flex rounded-xl border border-border bg-card p-1">
-              <button
-                type="button"
-                onClick={() => navigate({ vista: "lista" })}
-                aria-label="Lista"
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium",
-                  applied.vista === "lista"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground",
-                )}
-              >
-                <List className="size-4" />
-                <span className="hidden sm:inline">Lista</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate({ vista: "mapa" })}
-                aria-label="Mapa"
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium",
-                  applied.vista === "mapa"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground",
-                )}
-              >
-                <MapIcon className="size-4" />
-                <span className="hidden sm:inline">Mapa</span>
-              </button>
-            </div>
-          ) : null}
+          <div className="inline-flex rounded-xl border border-border bg-card p-1">
+            <button
+              type="button"
+              onClick={() => navigate({ vista: "lista" })}
+              aria-label="Lista"
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium",
+                applied.vista === "lista"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground",
+              )}
+            >
+              <List className="size-4" />
+              <span className="hidden sm:inline">Lista</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate({ vista: "mapa" })}
+              aria-label="Mapa"
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium",
+                applied.vista === "mapa"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground",
+              )}
+            >
+              <MapIcon className="size-4" />
+              <span className="hidden sm:inline">Mapa</span>
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -384,7 +381,7 @@ export function ExplorarClient({
               className="relative"
               onClick={abrirDrawer}
               aria-expanded={drawerOpen}
-              aria-controls="explorar-filtros-drawer"
+              aria-controls="convites-filtros-drawer"
             >
               <SlidersHorizontal className="size-4" />
               Filtros
@@ -406,19 +403,16 @@ export function ExplorarClient({
         {applied.seccion === "convites" ? (
           <>
             <p className="text-sm text-muted-foreground">
-              {meta.total} iniciativa{meta.total === 1 ? "" : "s"}
+              {applied.vista === "mapa"
+                ? `${mapaPins.length} convite${mapaPins.length === 1 ? "" : "s"} en el mapa`
+                : `${meta.total} iniciativa${meta.total === 1 ? "" : "s"}`}
               {showPager
                 ? ` · página ${meta.current_page} de ${meta.last_page}`
                 : null}
             </p>
 
             {applied.vista === "mapa" ? (
-              <ExplorarMap
-                pins={mapaPins.map((p) => ({
-                  ...p,
-                  zona: undefined,
-                }))}
-              />
+              <ConvitesMap pins={mapaPins} />
             ) : iniciativas.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">
                 No encontramos convites con esos filtros.
@@ -434,16 +428,26 @@ export function ExplorarClient({
         ) : (
           <>
             <p className="text-sm text-muted-foreground">
-              {meta.total} material{meta.total === 1 ? "" : "es"} que aún faltan
+              {applied.vista === "mapa"
+                ? `${mapaPins.length} convite${mapaPins.length === 1 ? "" : "s"} con materiales en el mapa`
+                : `${meta.total} material${meta.total === 1 ? "" : "es"} que aún faltan`}
               {showPager
                 ? ` · página ${meta.current_page} de ${meta.last_page}`
                 : null}
             </p>
-            <p className="text-sm text-muted-foreground">
-              ¿Tenés algo de esto? Entrá al convite y ofrecé tu aporte.
-            </p>
+            {applied.vista === "lista" ? (
+              <p className="text-sm text-muted-foreground">
+                ¿Tenés algo de esto? Entrá al convite y ofrecé tu aporte.
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Cada pin es un convite que todavía pide alguno de esos materiales.
+              </p>
+            )}
 
-            {materiales.length === 0 ? (
+            {applied.vista === "mapa" ? (
+              <ConvitesMap pins={mapaPins} />
+            ) : materiales.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">
                 No encontramos materiales pendientes con esos filtros.
               </div>
@@ -495,15 +499,15 @@ export function ExplorarClient({
             onClick={cerrarDrawer}
           />
           <aside
-            id="explorar-filtros-drawer"
+            id="convites-filtros-drawer"
             role="dialog"
             aria-modal="true"
-            aria-labelledby="explorar-filtros-titulo"
+            aria-labelledby="convites-filtros-titulo"
             className="absolute inset-y-0 right-0 flex w-full max-w-sm flex-col border-l border-border bg-background shadow-xl"
           >
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
               <h2
-                id="explorar-filtros-titulo"
+                id="convites-filtros-titulo"
                 className="font-serif text-lg font-semibold text-foreground"
               >
                 Filtros
@@ -521,7 +525,7 @@ export function ExplorarClient({
 
             <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
               <div className="space-y-1.5">
-                <Label htmlFor="explorar-geo">Zona</Label>
+                <Label htmlFor="convites-geo">Zona</Label>
                 <Select
                   value={draft.geo}
                   onValueChange={(v) => {
@@ -530,7 +534,7 @@ export function ExplorarClient({
                   }}
                   items={geoOptions}
                 >
-                  <SelectTrigger id="explorar-geo" className="w-full">
+                  <SelectTrigger id="convites-geo" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -544,7 +548,7 @@ export function ExplorarClient({
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="explorar-categoria">Categoría</Label>
+                <Label htmlFor="convites-categoria">Categoría</Label>
                 <Select
                   value={draft.categoria}
                   onValueChange={(v) => {
@@ -553,7 +557,7 @@ export function ExplorarClient({
                   }}
                   items={CATEGORIA_ITEMS}
                 >
-                  <SelectTrigger id="explorar-categoria" className="w-full">
+                  <SelectTrigger id="convites-categoria" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -567,7 +571,7 @@ export function ExplorarClient({
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="explorar-urgencia">Urgencia</Label>
+                <Label htmlFor="convites-urgencia">Urgencia</Label>
                 <Select
                   value={draft.urgencia}
                   onValueChange={(v) => {
@@ -576,7 +580,7 @@ export function ExplorarClient({
                   }}
                   items={URGENCIA_ITEMS}
                 >
-                  <SelectTrigger id="explorar-urgencia" className="w-full">
+                  <SelectTrigger id="convites-urgencia" className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -592,7 +596,7 @@ export function ExplorarClient({
               {incluirOrden ? (
                 <>
                   <div className="space-y-1.5">
-                    <Label htmlFor="explorar-orden">Ordenar por</Label>
+                    <Label htmlFor="convites-orden">Ordenar por</Label>
                     <Select
                       value={draft.orden}
                       onValueChange={(v) => {
@@ -603,7 +607,7 @@ export function ExplorarClient({
                       }}
                       items={[...ORDEN_ITEMS]}
                     >
-                      <SelectTrigger id="explorar-orden" className="w-full">
+                      <SelectTrigger id="convites-orden" className="w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -617,9 +621,9 @@ export function ExplorarClient({
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="explorar-dir">Dirección</Label>
+                    <Label htmlFor="convites-dir">Dirección</Label>
                     <Button
-                      id="explorar-dir"
+                      id="convites-dir"
                       type="button"
                       variant="outline"
                       className="h-9 w-full justify-start"

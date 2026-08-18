@@ -6,7 +6,7 @@ import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-export type ExplorarMapPin = {
+export type ConvitesMapPin = {
   id: string;
   slug: string;
   titulo: string;
@@ -38,7 +38,7 @@ function FitBounds({ points }: { points: Array<[number, number]> }) {
   return null;
 }
 
-export function ExplorarMap({ pins }: { pins: ExplorarMapPin[] }) {
+export function ConvitesMap({ pins }: { pins: ConvitesMapPin[] }) {
   const points = useMemo(
     () => pins.map((p) => [p.lat, p.lng] as [number, number]),
     [pins],

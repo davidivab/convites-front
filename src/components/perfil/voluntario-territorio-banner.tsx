@@ -71,8 +71,8 @@ export function VoluntarioTerritorioBanner({ user }: { user: AuthUser | null }) 
                 : "aún sin asignar — pide a un admin que te vincule"}
           </p>
           <div className="flex flex-wrap gap-2 pt-1">
-            <Button size="sm" render={<Link href="/explorar" />}>
-              Explorar convites
+            <Button size="sm" render={<Link href="/convites" />}>
+              Ver convites
             </Button>
             <Button size="sm" variant="outline" render={<Link href="/crear" />}>
               Crear un convite

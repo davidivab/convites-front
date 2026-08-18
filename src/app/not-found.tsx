@@ -8,7 +8,7 @@ export default function NotFound() {
       <p className="text-sm text-muted-foreground">
         El enlace puede estar roto o el convite ya no está disponible.
       </p>
-      <Button render={<Link href="/explorar" />}>Explorar convites</Button>
+      <Button render={<Link href="/convites" />}>Ver convites</Button>
     </div>
   );
 }
