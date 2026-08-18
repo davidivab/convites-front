@@ -58,8 +58,8 @@ export default async function HomePage() {
               </div>
 
               <h1 className="mt-6 font-serif text-4xl leading-[1.05] font-semibold text-balance text-background sm:text-5xl md:text-6xl">
-                A Pereira ya la construimos entre todos una vez y lo volveremos a
-                hacer.
+                Colombia se levanta cuando nos juntamos: ya lo hicimos, y lo
+                haremos otra vez.
               </h1>
 
               <p className="mt-5 max-w-xl text-base leading-relaxed text-background/85 md:text-lg">
