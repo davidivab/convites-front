@@ -2,6 +2,9 @@
 # Same stack as docker-compose.prod.yml — prefer this filename in Dokploy.
 #
 # IMPORTANT: NEXT_PUBLIC_API_URL is compile-time. Changing it requires image rebuild.
+#
+# No host `ports:` mapping — Dokploy/Traefik reaches container port 3000 on the
+# compose network. Binding 0.0.0.0:3000 collides when another app already owns it.
 name: convites-front
 
 services:
@@ -14,8 +17,8 @@ services:
     image: ${APP_IMAGE_NAME:-convites-front}:prod
     container_name: convites-front
     restart: unless-stopped
-    ports:
-      - "${FRONT_PORT:-3000}:3000"
+    expose:
+      - "3000"
     environment:
       NODE_ENV: production
       PORT: 3000

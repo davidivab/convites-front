@@ -1,5 +1,6 @@
 # Production compose for Dokploy (legacy name). Prefer docker-compose.production.yml.
 # IMPORTANT: NEXT_PUBLIC_API_URL is compile-time. Changing it requires image rebuild.
+# No host port publish — see docker-compose.production.yml.
 name: convites-front
 
 services:
@@ -12,8 +13,8 @@ services:
     image: ${APP_IMAGE_NAME:-convites-front}:prod
     container_name: convites-front
     restart: unless-stopped
-    ports:
-      - "${FRONT_PORT:-3000}:3000"
+    expose:
+      - "3000"
     environment:
       NODE_ENV: production
       PORT: 3000
