@@ -21,7 +21,7 @@ import { ExternalMoneyCallout } from "@/components/iniciativa/external-money-cal
 import { DepartamentoMunicipioSelect } from "@/components/ui/departamento-municipio-select"
 import { PhoneInput, isPhoneValid } from "@/components/ui/phone-input"
 import { HorarioSemanaGrid } from "@/components/ui/horario-semana-grid"
-import { ApiError } from "@/lib/api"
+import { apiErrorMessage } from "@/lib/api"
 import {
   createIniciativa,
   deleteIniciativaGaleria,
@@ -428,11 +428,7 @@ function CrearClientInner() {
       setDraftVersion(created.version ?? 1)
       return { ok: true, slug: created.slug, id }
     } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? err.body.message || "No pudimos guardar el borrador."
-          : "No pudimos guardar el borrador.",
-      )
+      setError(apiErrorMessage(err, "No pudimos guardar el borrador."))
       return { ok: false, slug: draftSlug, id: draftId }
     } finally {
       setSavingDraft(false)
@@ -558,11 +554,7 @@ function CrearClientInner() {
       setDraftVersion(updated.version)
       setPortadaUrl(updated.imagen_path)
     } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? err.body.message || "No pudimos subir la portada."
-          : "No pudimos subir la portada.",
-      )
+      setError(apiErrorMessage(err, "No pudimos subir la portada."))
     } finally {
       setMediaBusy(false)
     }
@@ -597,11 +589,7 @@ function CrearClientInner() {
         setGaleria((prev) => [...prev, { id: uploaded.id, url: uploaded.url }])
       }
     } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? err.body.message || "No pudimos subir una foto de la galería."
-          : "No pudimos subir una foto de la galería.",
-      )
+      setError(apiErrorMessage(err, "No pudimos subir una foto de la galería."))
     } finally {
       setMediaBusy(false)
     }
@@ -616,11 +604,7 @@ function CrearClientInner() {
       setDraftVersion(updated.version)
       setGaleria((prev) => prev.filter((g) => g.id !== galeriaId))
     } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? err.body.message || "No pudimos quitar la foto."
-          : "No pudimos quitar la foto.",
-      )
+      setError(apiErrorMessage(err, "No pudimos quitar la foto."))
     } finally {
       setMediaBusy(false)
     }
@@ -672,11 +656,7 @@ function CrearClientInner() {
       await enviarRevision(token, result.id)
       router.push("/panel/creador")
     } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? err.body.message || "No pudimos enviar el convite a revisión."
-          : "No pudimos enviar el convite a revisión.",
-      )
+      setError(apiErrorMessage(err, "No pudimos enviar el convite a revisión."))
     } finally {
       setSubmitting(false)
     }

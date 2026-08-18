@@ -3,10 +3,10 @@ import { Suspense } from "react"
 import { AdminUsersListClient } from "@/components/admin/admin-users-list-client"
 
 export const metadata: Metadata = {
-  title: "Usuarios | Admin",
+  title: "Ciudadanos | Admin",
 }
 
-export default function AdminUsuariosPage() {
+export default function AdminCiudadanosPage() {
   return (
     <Suspense
       fallback={
@@ -16,10 +16,10 @@ export default function AdminUsuariosPage() {
       }
     >
       <AdminUsersListClient
-        title="Usuarios con rol"
-        subtitle="Moderadores y voluntarios (roles especiales). Para ver a todos los registrados, usa Ciudadanos."
-        activePath="/admin/usuarios"
-        listMode="staff"
+        title="Ciudadanos registrados"
+        subtitle="Todas las cuentas de la plataforma, incluidas las que aún no tienen rol especial."
+        activePath="/admin/ciudadanos"
+        listMode="todos"
       />
     </Suspense>
   )

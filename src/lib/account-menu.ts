@@ -15,6 +15,7 @@ export function accountMenuItems(user: AuthUser | null | undefined): DashboardNa
   const primary = resolvePrimaryRole(user)
   if (primary === "admin") {
     return [
+      { href: "/admin/ciudadanos", label: "Ciudadanos" },
       { href: "/admin/usuarios", label: "Usuarios" },
       { href: "/admin/moderadores", label: "Moderadores" },
       { href: "/admin/voluntarios", label: "Voluntarios" },

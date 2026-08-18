@@ -38,6 +38,20 @@ export class ApiError extends Error {
   }
 }
 
+/** Primer mensaje usable de un 422 (errors.*) o message; fallback si no hay nada. */
+export function apiErrorMessage(err: unknown, fallback: string): string {
+  if (!(err instanceof ApiError)) return fallback;
+  const fieldErrors = err.body.errors;
+  if (fieldErrors) {
+    for (const msgs of Object.values(fieldErrors)) {
+      const first = msgs?.find((m) => typeof m === "string" && m.trim());
+      if (first) return first.trim();
+    }
+  }
+  const msg = err.body.message?.trim();
+  return msg || fallback;
+}
+
 export async function apiFetch<T>(
   path: string,
   init: RequestInit = {},

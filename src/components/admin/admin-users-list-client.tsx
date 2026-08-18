@@ -73,7 +73,8 @@ export function AdminUsersListClient({
   title: string
   subtitle: string
   activePath: string
-  listMode: "all" | "moderator" | "voluntario"
+  /** staff = moderador+voluntario (default API); todos = ciudadanos con `todos=1` */
+  listMode: "staff" | "todos" | "moderator" | "voluntario"
 }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -144,7 +145,11 @@ export function AdminUsersListClient({
     setError(null)
     try {
       const res = await fetchAdminUsers(token, {
-        ...(listMode === "all" ? { scope: "all" } : { role: listMode }),
+        ...(listMode === "todos"
+          ? { todos: true }
+          : listMode === "staff"
+            ? {}
+            : { role: listMode }),
         q: q || undefined,
         sort,
         order,
@@ -214,7 +219,7 @@ export function AdminUsersListClient({
       },
     ]
 
-    if (listMode !== "all") {
+    if (listMode !== "todos") {
       cols.push({
         id: "municipios",
         header: "Municipios",

@@ -89,6 +89,7 @@ describe("dashboardItemsForRole", () => {
       }),
     )
     expect(items.map((i) => i.href)).toEqual([
+      "/admin/ciudadanos",
       "/admin/usuarios",
       "/admin/moderadores",
       "/admin/voluntarios",
@@ -135,6 +136,7 @@ describe("perfilTabsForRole", () => {
   it("admin siempre ve las pestañas de listas + operación", () => {
     const tabs = perfilTabsForRole(admin, "/admin/usuarios")
     expect(tabs.map((t) => t.label)).toEqual([
+      "Ciudadanos",
       "Usuarios",
       "Moderadores",
       "Voluntarios",
@@ -144,6 +146,7 @@ describe("perfilTabsForRole", () => {
       "Perfil",
     ])
     expect(tabs.map((t) => t.href)).toEqual([
+      "/admin/ciudadanos",
       "/admin/usuarios",
       "/admin/moderadores",
       "/admin/voluntarios",

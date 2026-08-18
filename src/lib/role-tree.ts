@@ -95,6 +95,7 @@ export function dashboardItemsForRole(
 
   if (primary === "admin") {
     return [
+      { href: "/admin/ciudadanos", label: "Ciudadanos" },
       { href: "/admin/usuarios", label: "Usuarios" },
       { href: "/admin/moderadores", label: "Moderadores" },
       { href: "/admin/voluntarios", label: "Voluntarios" },
@@ -124,6 +125,7 @@ export function perfilTabsForRole(
   const items: DashboardNavItem[] =
     primary === "admin"
       ? [
+          { href: "/admin/ciudadanos", label: "Ciudadanos" },
           { href: "/admin/usuarios", label: "Usuarios" },
           { href: "/admin/moderadores", label: "Moderadores" },
           { href: "/admin/voluntarios", label: "Voluntarios" },

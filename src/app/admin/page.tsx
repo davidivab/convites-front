@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   title: "Administración — Convites",
 }
 
-/** Hub histórico: la lista de usuarios vive en /admin/usuarios. */
+/** Hub histórico: por defecto la vista de todos los registrados. */
 export default function AdminPage() {
-  redirect("/admin/usuarios")
+  redirect("/admin/ciudadanos")
 }

@@ -145,32 +145,12 @@ export default async function ConvitesPage({
       // Mapa de convites (en materiales: solo los que piden ítems del filtro)
       let pins = await fetchIniciativasMapa({
         zona: geo.zona,
+        municipio: geo.municipio,
         categoria: filterParams.categoria,
         urgencia: filterParams.urgencia,
         q: seccion === "convites" ? filterParams.q : undefined,
         server: true,
       });
-
-      if (geo.municipio) {
-        const res = await fetchIniciativasPage({
-          ...filterParams,
-          q: seccion === "convites" ? filterParams.q : undefined,
-          per_page: 50,
-          page: 1,
-          orden: undefined,
-          dir: undefined,
-        });
-        pins = res.data
-          .filter((i) => typeof i.lat === "number" && typeof i.lng === "number")
-          .map((i) => ({
-            id: i.id,
-            slug: i.slug,
-            titulo: i.titulo,
-            lat: i.lat!,
-            lng: i.lng!,
-            zonaNombre: i.zona,
-          }));
-      }
 
       if (seccion === "materiales") {
         const mats = await fetchMaterialesPage({

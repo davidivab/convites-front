@@ -5,6 +5,14 @@ Sesión agente 2026-08-16 (loop 5h + trabajo previo en la misma chat).
 
 ---
 
+### [F37] Admin: pestaña Ciudadanos (todos los registrados) — 2026-08-18
+- `/admin/ciudadanos` con `GET /api/admin/users?todos=1` (+ `q`)
+- Usuarios = solo moderador/voluntario (staff); nav + tabs actualizados
+
+### [P49/P50] Cleanup mapa + errores 422 en español — 2026-08-18
+- `fetchIniciativasMapa` pasa `municipio`/`departamento`; sin fallback a listado paginado
+- `apiErrorMessage()` muestra primer `errors.*` del API (ya en ES) en `/crear`
+
 ### [F36] Build prod TypeScript (bloqueaba Dokploy) — 2026-08-18
 - `ApiIniciativa` desde `@/lib/types` en admin convites
 - `enviarRevision` / `cerrarIniciativa` devuelven `Iniciativa` vía `mapIniciativa`

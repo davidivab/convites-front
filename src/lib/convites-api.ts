@@ -97,6 +97,8 @@ export async function fetchIniciativasPage(params?: {
 /** Listado liviano para el mapa de /convites (no paginado). */
 export async function fetchIniciativasMapa(params?: {
   zona?: string;
+  municipio?: string;
+  departamento?: string;
   categoria?: string;
   urgencia?: string;
   q?: string;
@@ -115,6 +117,8 @@ export async function fetchIniciativasMapa(params?: {
 > {
   const qs = new URLSearchParams();
   if (params?.zona) qs.set("zona", params.zona);
+  if (params?.municipio) qs.set("municipio", params.municipio);
+  if (params?.departamento) qs.set("departamento", params.departamento);
   if (params?.categoria) qs.set("categoria", params.categoria);
   if (params?.urgencia) qs.set("urgencia", params.urgencia);
   if (params?.q) qs.set("q", params.q);
@@ -625,6 +629,9 @@ export async function fetchAdminUsers(
   token: string,
   params?: {
     role?: "moderator" | "voluntario" | "admin" | "member" | "profesional";
+    /** Lista todos los registrados (ciudadanos incl. solo `member`). */
+    todos?: boolean;
+    /** @deprecated Preferir `todos` — el API ya no usa scope. */
     scope?: "all" | "staff";
     q?: string;
     sort?: "name" | "email" | "created_at";
@@ -638,7 +645,7 @@ export async function fetchAdminUsers(
 }> {
   const qs = new URLSearchParams();
   if (params?.role) qs.set("role", params.role);
-  if (params?.scope) qs.set("scope", params.scope);
+  if (params?.todos || params?.scope === "all") qs.set("todos", "1");
   if (params?.q?.trim()) qs.set("q", params.q.trim());
   if (params?.sort) qs.set("sort", params.sort);
   if (params?.order) qs.set("order", params.order);
