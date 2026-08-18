@@ -693,7 +693,7 @@ function CrearClientInner() {
   if (!token) {
     return (
       <div className="mx-auto max-w-3xl py-16 text-center text-sm text-muted-foreground">
-        Para abrir un convite necesitás ingresar. Te estamos llevando…
+        Para abrir un convite necesitas ingresar. Te estamos llevando…
       </div>
     )
   }

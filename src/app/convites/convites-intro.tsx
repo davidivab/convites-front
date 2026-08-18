@@ -8,7 +8,7 @@ export function ConvitesIntro() {
     <PageIntroSection
       title="Convites abiertos en Risaralda"
       className="bg-secondary/40"
-      description="Encontrá una iniciativa cerca tuyo y sumate con lo que puedas llevar. O buscá por material: si tenés algo, mirá a quién le sirve."
+      description="Encuentra una iniciativa cerca de ti y súmate con lo que puedas llevar. O busca por material: si tienes algo, mira a quién le sirve."
     >
       <TrustBanner className="bg-card" />
     </PageIntroSection>

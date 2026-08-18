@@ -437,7 +437,7 @@ export function ConvitesClient({
             </p>
             {applied.vista === "lista" ? (
               <p className="text-sm text-muted-foreground">
-                ¿Tenés algo de esto? Entrá al convite y ofrecé tu aporte.
+                ¿Tienes algo de esto? Entra al convite y ofrece tu aporte.
               </p>
             ) : (
               <p className="text-sm text-muted-foreground">

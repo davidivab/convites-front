@@ -12,7 +12,7 @@ const PASOS = [
     icon: HandHeart,
     titulo: 'Cada quien suma lo que puede',
     texto:
-      'Elegís qué llevar: tejas, cemento, comida, herramientas o tus manos. Todo se refleja al instante.',
+      'Eliges qué llevar: tejas, cemento, comida, herramientas o tus manos. Todo se refleja al instante.',
   },
   {
     icon: Hammer,

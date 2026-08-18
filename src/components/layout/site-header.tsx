@@ -21,7 +21,7 @@ const NAV: NavItem[] = [
   {
     label: "Adicionales",
     items: [
-      { href: "/centros", label: "Centros de interés" },
+      { href: "/centros", label: "Lugares de ayuda" },
       { href: "/manos-profesionales", label: "Manos profesionales" },
     ],
   },

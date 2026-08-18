@@ -136,7 +136,7 @@ export function CentrosClient({ centros: iniciales }: { centros: Centro[] }) {
   return (
     <>
       <PageIntroSection
-        title="Centros de interés en Risaralda"
+        title="Lugares de ayuda en Risaralda"
         eyebrow="Directorio de emergencia"
         className="bg-secondary/40"
         description={

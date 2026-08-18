@@ -17,7 +17,7 @@ export function ExternalMoneyCallout({
           <span className="font-medium text-foreground">
             Convites no recibe ni administra dinero.
           </span>{' '}
-          Si preferís aportar en dinero, lo hacés directamente en la plataforma externa.
+          Si prefieres aportar en dinero, lo haces directamente en la plataforma externa.
         </p>
       </div>
       {url ? (

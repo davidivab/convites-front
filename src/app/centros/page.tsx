@@ -6,9 +6,9 @@ import type { Centro } from "@/lib/data"
 import { CentrosClient } from "./centros-client"
 
 export const metadata: Metadata = {
-  title: "Centros de interés — Convites",
+  title: "Lugares de ayuda — Convites",
   description:
-    "Directorio de centros de acopio, albergues, hospitales, bomberos y líneas de emergencia en Risaralda.",
+    "Directorio de lugares de ayuda: acopio, albergues, hospitales, bomberos y líneas de emergencia en Risaralda.",
 }
 
 export const revalidate = 120

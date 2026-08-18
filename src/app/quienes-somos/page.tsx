@@ -100,7 +100,7 @@ export default function QuienesSomosPage() {
                 ¿Tu barrio o vereda necesita un convite?
               </h2>
               <p className="mt-2 text-pretty leading-relaxed text-primary-foreground/80">
-                Contá qué pasó y qué falta. Lo revisamos y lo hacemos llegar a
+                Cuenta qué pasó y qué falta. Lo revisamos y lo hacemos llegar a
                 más gente.
               </p>
             </div>

@@ -115,7 +115,7 @@ export function LocationPicker({
   async function buscar() {
     const q = query.trim();
     if (q.length < 3) {
-      setGeoError("Escribí al menos 3 letras (barrio o vereda).");
+      setGeoError("Escribe al menos 3 letras (barrio o vereda).");
       return;
     }
     setSearching(true);
@@ -126,10 +126,10 @@ export function LocationPicker({
       );
       setResults(res.data ?? []);
       if ((res.data ?? []).length === 0) {
-        setGeoError("No encontramos ese lugar. Probá con otro nombre o mové el pin.");
+        setGeoError("No encontramos ese lugar. Prueba con otro nombre o mueve el pin.");
       }
     } catch {
-      setGeoError("No pudimos buscar ahora. Mové el pin en el mapa.");
+      setGeoError("No pudimos buscar ahora. Mueve el pin en el mapa.");
     } finally {
       setSearching(false);
     }
@@ -157,7 +157,7 @@ export function LocationPicker({
   return (
     <div className={cn("space-y-3", className)}>
       <div>
-        <Label className="text-base">Marcá el punto en el mapa</Label>
+        <Label className="text-base">Marca el punto en el mapa</Label>
         <p className="mt-1 text-sm text-muted-foreground">
           Este es el lugar de encuentro del convite. Puedes usar tu ubicación,
           buscar el barrio o arrastrar el pin.
@@ -268,7 +268,7 @@ export function LocationPicker({
             {label || `${value.lat.toFixed(5)}, ${value.lng.toFixed(5)}`}
           </>
         ) : (
-          "Todavía no hay un punto. Tocá el mapa o usá los botones de arriba."
+          "Todavía no hay un punto. Toca el mapa o usa los botones de arriba."
         )}
       </p>
     </div>

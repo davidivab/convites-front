@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { BrandMark } from "@/components/layout/brand-mark";
 import { TrustBanner } from "@/components/layout/trust-banner";
 import { ComoFunciona } from "@/components/marketing/como-funciona";
+import { HomeCtaCards } from "@/components/marketing/home-cta-cards";
 import { CampaignCard } from "@/components/iniciativa/campaign-card";
 import { fetchIniciativas } from "@/lib/convites-api";
 import type { Iniciativa } from "@/lib/data";
@@ -93,6 +94,8 @@ export default async function HomePage() {
           <TrustBanner className="bg-card shadow-sm" />
         </section>
 
+        <HomeCtaCards />
+
         <ComoFunciona />
 
         <section className="mx-auto w-full max-w-6xl px-4 py-14">
@@ -136,7 +139,7 @@ export default async function HomePage() {
                 ¿Tu barrio o vereda necesita un convite?
               </h2>
               <p className="mt-2 text-pretty leading-relaxed text-muted-foreground">
-                Contá qué pasó y qué falta. Lo revisamos y lo hacemos llegar a
+                Cuenta qué pasó y qué falta. Lo revisamos y lo hacemos llegar a
                 más gente.
               </p>
             </div>

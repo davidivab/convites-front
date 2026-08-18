@@ -381,7 +381,7 @@ export function AportarClient({ iniciativa }: { iniciativa: Iniciativa }) {
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
               Al confirmar, otras personas y el organizador van a contar con lo
-              que ofrecés. Si no podés cumplirlo, cancelá o ajustá el aporte
+              que ofreces. Si no puedes cumplirlo, cancela o ajusta el aporte
               antes del convite. No registres cantidades que no vas a llevar.
             </p>
             {(seleccionados.length > 0 || asisto) && (
