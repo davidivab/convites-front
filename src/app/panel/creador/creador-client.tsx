@@ -78,7 +78,7 @@ export function PanelCreadorClient() {
     try {
       const updated = await enviarRevision(token, ini.id)
       setMias((prev) =>
-        prev.map((i) => (i.id === ini.id ? { ...i, ...updated } : i)),
+        prev.map((i) => (i.id === ini.id ? updated : i)),
       )
     } catch (err) {
       setError(
@@ -102,11 +102,7 @@ export function PanelCreadorClient() {
     try {
       const updated = await cerrarIniciativa(token, ini.id)
       setMias((prev) =>
-        prev.map((i) =>
-          i.id === ini.id
-            ? { ...i, estado: "cerrada" as const, ...updated }
-            : i,
-        ),
+        prev.map((i) => (i.id === ini.id ? updated : i)),
       )
     } catch (err) {
       setError(

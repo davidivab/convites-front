@@ -336,7 +336,7 @@ export async function cerrarIniciativa(
   token: string,
   id: string | number,
   nota?: string,
-): Promise<ApiIniciativa> {
+): Promise<Iniciativa> {
   const res = await apiFetch<{ data: ApiIniciativa }>(
     `/api/iniciativas/${id}/cerrar`,
     {
@@ -345,15 +345,19 @@ export async function cerrarIniciativa(
     },
     { token },
   );
-  return res.data;
+  return mapIniciativa(res.data);
 }
 
-export async function enviarRevision(token: string, id: string | number) {
-  return apiFetch<{ data: ApiIniciativa }>(
+export async function enviarRevision(
+  token: string,
+  id: string | number,
+): Promise<Iniciativa> {
+  const res = await apiFetch<{ data: ApiIniciativa }>(
     `/api/iniciativas/${id}/enviar-revision`,
     { method: "POST" },
     { token },
   );
+  return mapIniciativa(res.data);
 }
 
 export async function crearAporte(

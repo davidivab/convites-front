@@ -19,10 +19,8 @@ import {
 } from "@/components/ui/select"
 import { useRequireRoleTree } from "@/hooks/use-require-role-tree"
 import { ApiError } from "@/lib/api"
-import {
-  fetchAdminIniciativas,
-  type ApiIniciativa,
-} from "@/lib/convites-api"
+import { fetchAdminIniciativas } from "@/lib/convites-api"
+import type { ApiIniciativa } from "@/lib/types"
 import { perfilTabsForRole } from "@/lib/role-tree"
 
 const ESTADOS = [
