@@ -1,22 +1,6 @@
-import type { Metadata } from "next"
-import { SiteHeader } from "@/components/layout/site-header"
-import { SiteFooter } from "@/components/layout/site-footer"
-import { RegistroProfesionalClient } from "./registro-profesional-client"
+import { redirect } from "next/navigation"
 
-export const metadata: Metadata = {
-  title: "Registro de profesional | Convites",
-  description:
-    "Regístrate como profesional voluntario. Verificamos tu título y certificados para que la comunidad confíe en tus manos.",
-}
-
-export default function RegistroProfesionalPage() {
-  return (
-    <div className="flex min-h-dvh flex-col bg-background">
-      <SiteHeader />
-      <main className="flex-1">
-        <RegistroProfesionalClient />
-      </main>
-      <SiteFooter />
-    </div>
-  )
+/** Ruta pública legacy → formulario interno del panel. */
+export default function RegistroProfesionalRedirectPage() {
+  redirect("/panel/roles/profesional/registro")
 }

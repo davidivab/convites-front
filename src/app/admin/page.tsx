@@ -1,10 +1,11 @@
 import type { Metadata } from "next"
-import { AdminClient } from "./admin-client"
+import { redirect } from "next/navigation"
 
 export const metadata: Metadata = {
-  title: "Administración | Convites",
+  title: "Administración — Convites",
 }
 
+/** Hub histórico: la lista de usuarios vive en /admin/usuarios. */
 export default function AdminPage() {
-  return <AdminClient />
+  redirect("/admin/usuarios")
 }

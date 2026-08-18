@@ -15,6 +15,7 @@ import {
   Cross,
   Shield,
   LifeBuoy,
+  ClipboardList,
   MapPin,
   Phone,
   Clock,
@@ -27,6 +28,7 @@ import {
   SlidersHorizontal,
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { PageIntroSection } from "@/components/layout/page-intro-section"
 import { cn } from "@/lib/utils"
 
 const TIPO_ICON: Record<TipoCentro, typeof Package> = {
@@ -36,9 +38,11 @@ const TIPO_ICON: Record<TipoCentro, typeof Package> = {
   hospital: Cross,
   policia: Shield,
   "defensa-civil": LifeBuoy,
+  censo: ClipboardList,
 }
 
 const ORDEN: TipoCentro[] = [
+  "censo",
   "acopio",
   "albergue",
   "hospital",
@@ -106,6 +110,22 @@ export function CentrosClient({ centros: iniciales }: { centros: Centro[] }) {
 
   const hayFiltros = filtro !== "todos" || zona !== "todas" || estado !== "todos" || query.trim() !== ""
 
+  const portalCenso = useMemo(
+    () =>
+      centros.find(
+        (c) =>
+          c.tipo === "censo" &&
+          Boolean(c.urlExterna) &&
+          c.nombre.toLowerCase().includes("portal"),
+      ) ?? null,
+    [centros],
+  )
+
+  const centrosLista = useMemo(() => {
+    if (!portalCenso) return centros
+    return centros.filter((c) => c.id !== portalCenso.id)
+  }, [centros, portalCenso])
+
   function limpiar() {
     setFiltro("todos")
     setZona("todas")
@@ -115,27 +135,26 @@ export function CentrosClient({ centros: iniciales }: { centros: Centro[] }) {
 
   return (
     <>
-      <section className="border-b border-border bg-secondary/40">
-        <div className="mx-auto w-full max-w-6xl px-4 py-12 md:py-16">
-          <p className="text-sm font-medium text-primary">Directorio de emergencia</p>
-          <h1 className="mt-2 max-w-2xl text-balance font-serif text-4xl leading-tight text-foreground md:text-5xl">
-            Centros de interés en Risaralda
-          </h1>
-          <p className="mt-4 max-w-2xl text-pretty leading-relaxed text-muted-foreground">
-            Dónde llevar donaciones, buscar refugio o pedir ayuda urgente. Antes de
-            desplazarte, confirma horarios y cupos por teléfono: la situación cambia hora a
-            hora.
-          </p>
-
-          <div className="mt-6 flex flex-wrap items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3">
-            <Phone className="size-4 text-destructive" />
-            <span className="text-sm text-foreground">
-              Emergencias: <strong>Bomberos 119</strong> · <strong>Policía 123</strong> ·{" "}
-              <strong>Ambulancias 125</strong>
-            </span>
-          </div>
+      <PageIntroSection
+        title="Centros de interés en Risaralda"
+        eyebrow="Directorio de emergencia"
+        className="bg-secondary/40"
+        description={
+          <>
+            Dónde llevar donaciones, buscar refugio o pedir ayuda urgente. Antes
+            de desplazarte, confirma horarios y cupos por teléfono: la situación
+            cambia hora a hora.
+          </>
+        }
+      >
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3">
+          <Phone className="size-4 text-destructive" />
+          <span className="text-sm text-foreground">
+            Emergencias: <strong>Bomberos 119</strong> ·{" "}
+            <strong>Policía 123</strong> · <strong>Ambulancias 125</strong>
+          </span>
         </div>
-      </section>
+      </PageIntroSection>
 
       <section className="mx-auto w-full max-w-6xl px-4 py-8">
         <div className="flex flex-col gap-3 sm:flex-row">
@@ -217,143 +236,193 @@ export function CentrosClient({ centros: iniciales }: { centros: Centro[] }) {
             </p>
           </div>
         ) : (
-        <div className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {centros.map((c) => {
-            const Icon = TIPO_ICON[c.tipo]
-            return (
-              <article
-                key={c.id}
-                className="flex flex-col rounded-2xl border border-border bg-card p-5 shadow-sm"
+          <>
+            {portalCenso && (
+              <a
+                href={portalCenso.urlExterna ?? "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-6 flex flex-col gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-5 transition-colors hover:border-primary/50 hover:bg-primary/10 sm:flex-row sm:items-center sm:justify-between"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <span className="inline-flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <Icon className="size-5" />
-                  </span>
-                  <EstadoPill estado={c.estado} />
+                <div className="min-w-0">
+                  <p className="text-xs font-medium uppercase tracking-wide text-primary">
+                    Vía principal · Alcaldía de Pereira
+                  </p>
+                  <h2 className="mt-1 font-serif text-xl text-foreground text-balance">
+                    {portalCenso.nombre}
+                  </h2>
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                    Reporta afectaciones en inmuebles en línea. Los puntos presenciales sirven si no
+                    tienes conectividad.
+                  </p>
                 </div>
+                <span className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground">
+                  <ExternalLink className="size-3.5" />
+                  Ir a sospereira.com
+                </span>
+              </a>
+            )}
 
-                <p className="mt-4 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {TIPO_CENTRO[c.tipo].label}
-                </p>
-                <h2 className="mt-1 font-serif text-xl leading-snug text-foreground text-balance">
-                  {c.nombre}
-                </h2>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  {c.descripcion}
-                </p>
-
-                <dl className="mt-4 space-y-2 text-sm">
-                  <div className="flex items-start gap-2">
-                    <MapPin className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                    <span className="text-foreground/80">
-                      {c.direccion} · {c.zona}
-                    </span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Clock className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                    <span className="text-foreground/80">{c.horario}</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Phone className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                    <a
-                      href={`tel:${c.telefono.replace(/\s/g, "")}`}
-                      className="font-medium text-primary hover:underline"
-                    >
-                      {c.telefono}
-                    </a>
-                  </div>
-                </dl>
-
-                {(() => {
-                  const consulta = encodeURIComponent(`${c.nombre}, ${c.direccion}, ${c.zona}`)
-                  const wazeUrl = `https://waze.com/ul?q=${consulta}&navigate=yes`
-                  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${consulta}`
-                  return (
-                    <div className="mt-4 grid grid-cols-2 gap-2">
-                      <a
-                        href={mapsUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center gap-1.5 rounded-full border border-border bg-card px-3 py-2 text-xs font-medium text-foreground transition-colors hover:border-primary/40 hover:text-primary"
-                      >
-                        <ExternalLink className="size-3.5" />
-                        Google Maps
-                      </a>
-                      <a
-                        href={wazeUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center gap-1.5 rounded-full border border-border bg-card px-3 py-2 text-xs font-medium text-foreground transition-colors hover:border-primary/40 hover:text-primary"
-                      >
-                        <Navigation className="size-3.5" />
-                        Waze
-                      </a>
-                    </div>
-                  )
-                })()}
-
-                {c.capacidad && (
-                  <div className="mt-4 rounded-xl bg-muted/50 p-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="flex items-center gap-1.5 text-muted-foreground">
-                        <Users className="size-4" /> Cupos
+            <div className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+              {centrosLista.map((c) => {
+                const Icon = TIPO_ICON[c.tipo]
+                return (
+                  <article
+                    key={c.id}
+                    className="flex flex-col rounded-2xl border border-border bg-card p-5 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="inline-flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <Icon className="size-5" />
                       </span>
-                      <span className="font-medium text-foreground">
-                        {c.capacidad.ocupado} / {c.capacidad.total}
-                      </span>
+                      <EstadoPill estado={c.estado} />
                     </div>
-                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-border">
-                      <div
-                        className={cn(
-                          "h-full rounded-full",
-                          c.capacidad.ocupado >= c.capacidad.total
-                            ? "bg-destructive"
-                            : "bg-primary",
-                        )}
-                        style={{
-                          width: `${Math.min(
-                            100,
-                            Math.round((c.capacidad.ocupado / c.capacidad.total) * 100),
-                          )}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
 
-                {c.necesita && (
-                  <div className="mt-4 space-y-3">
-                    <div>
-                      <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-                        <Check className="size-3.5 text-primary" /> Se necesita
-                      </p>
-                      <ul className="mt-1.5 flex flex-wrap gap-1.5">
-                        {c.necesita.map((n) => (
-                          <li
-                            key={n}
-                            className="rounded-full bg-primary/10 px-2.5 py-1 text-xs text-primary"
+                    <p className="mt-4 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      {TIPO_CENTRO[c.tipo].label}
+                    </p>
+                    <h2 className="mt-1 font-serif text-xl leading-snug text-foreground text-balance">
+                      {c.nombre}
+                    </h2>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                      {c.descripcion}
+                    </p>
+
+                    <dl className="mt-4 space-y-2 text-sm">
+                      <div className="flex items-start gap-2">
+                        <MapPin className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                        <span className="text-foreground/80">
+                          {c.direccion}
+                          {c.zona ? ` · ${c.zona}` : ""}
+                        </span>
+                      </div>
+                      {c.horario ? (
+                        <div className="flex items-start gap-2">
+                          <Clock className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                          <span className="text-foreground/80">{c.horario}</span>
+                        </div>
+                      ) : null}
+                      {c.telefono ? (
+                        <div className="flex items-start gap-2">
+                          <Phone className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                          <a
+                            href={`tel:${c.telefono.replace(/\s/g, "")}`}
+                            className="font-medium text-primary hover:underline"
                           >
-                            {n}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    {c.noRecibe && (
-                      <div>
-                        <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-                          <X className="size-3.5 text-muted-foreground" /> No recibe
-                        </p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {c.noRecibe.join(" · ")}
-                        </p>
+                            {c.telefono}
+                          </a>
+                        </div>
+                      ) : null}
+                      {c.urlExterna ? (
+                        <div className="flex items-start gap-2">
+                          <ExternalLink className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                          <a
+                            href={c.urlExterna}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-medium text-primary hover:underline"
+                          >
+                            Reportar en sospereira.com
+                          </a>
+                        </div>
+                      ) : null}
+                    </dl>
+
+                    {c.tipo !== "censo" || c.direccion !== "Reporte en línea" ? (
+                      (() => {
+                        const consulta = encodeURIComponent(
+                          `${c.nombre}, ${c.direccion}${c.zona ? `, ${c.zona}` : ""}`,
+                        )
+                        const wazeUrl = `https://waze.com/ul?q=${consulta}&navigate=yes`
+                        const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${consulta}`
+                        return (
+                          <div className="mt-4 grid grid-cols-2 gap-2">
+                            <a
+                              href={mapsUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center justify-center gap-1.5 rounded-full border border-border bg-card px-3 py-2 text-xs font-medium text-foreground transition-colors hover:border-primary/40 hover:text-primary"
+                            >
+                              <ExternalLink className="size-3.5" />
+                              Google Maps
+                            </a>
+                            <a
+                              href={wazeUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center justify-center gap-1.5 rounded-full border border-border bg-card px-3 py-2 text-xs font-medium text-foreground transition-colors hover:border-primary/40 hover:text-primary"
+                            >
+                              <Navigation className="size-3.5" />
+                              Waze
+                            </a>
+                          </div>
+                        )
+                      })()
+                    ) : null}
+
+                    {c.capacidad && (
+                      <div className="mt-4 rounded-xl bg-muted/50 p-3">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="flex items-center gap-1.5 text-muted-foreground">
+                            <Users className="size-4" /> Cupos
+                          </span>
+                          <span className="font-medium text-foreground">
+                            {c.capacidad.ocupado} / {c.capacidad.total}
+                          </span>
+                        </div>
+                        <div className="mt-2 h-2 overflow-hidden rounded-full bg-border">
+                          <div
+                            className={cn(
+                              "h-full rounded-full",
+                              c.capacidad.ocupado >= c.capacidad.total
+                                ? "bg-destructive"
+                                : "bg-primary",
+                            )}
+                            style={{
+                              width: `${Math.min(
+                                100,
+                                Math.round((c.capacidad.ocupado / c.capacidad.total) * 100),
+                              )}%`,
+                            }}
+                          />
+                        </div>
                       </div>
                     )}
-                  </div>
-                )}
-              </article>
-            )
-          })}
-        </div>
+
+                    {c.necesita && (
+                      <div className="mt-4 space-y-3">
+                        <div>
+                          <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                            <Check className="size-3.5 text-primary" /> Se necesita
+                          </p>
+                          <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                            {c.necesita.map((n) => (
+                              <li
+                                key={n}
+                                className="rounded-full bg-primary/10 px-2.5 py-1 text-xs text-primary"
+                              >
+                                {n}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        {c.noRecibe && (
+                          <div>
+                            <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                              <X className="size-3.5 text-muted-foreground" /> No recibe
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {c.noRecibe.join(" · ")}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </article>
+                )
+              })}
+            </div>
+          </>
         )}
       </section>
     </>

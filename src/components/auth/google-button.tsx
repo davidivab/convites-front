@@ -1,5 +1,8 @@
-import Link from "next/link"
+"use client"
+
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { ApiError } from "@/lib/api"
 
 function GoogleIcon() {
   return (
@@ -25,20 +28,69 @@ function GoogleIcon() {
 }
 
 export function GoogleButton({
-  href,
-  label,
+  label = "Continuar con Google",
+  disabled = false,
+  intent = "login",
 }: {
-  href: string
-  label: string
+  label?: string
+  disabled?: boolean
+  /** P47: login no crea cuenta; register inicia flujo de registro. */
+  intent?: "login" | "register"
 }) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function onClick() {
+    if (disabled || loading) return
+    setLoading(true)
+    setError(null)
+    try {
+      // Evita reutilizar un google_code viejo de un intento anterior.
+      try {
+        sessionStorage.removeItem("convites_google_pending_code")
+      } catch {
+        // ignore
+      }
+      const qs = new URLSearchParams({ intent })
+      const res = await fetch(`/api/auth/google/redirect?${qs}`, {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+      })
+      const data = (await res.json().catch(() => ({}))) as {
+        url?: string
+        message?: string
+      }
+      if (!res.ok || !data.url) {
+        throw new ApiError(res.status, {
+          message:
+            data.message ||
+            "Google no está configurado aún (faltan credenciales en el API).",
+        })
+      }
+      window.location.href = data.url
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.body.message || "No pudimos abrir Google."
+          : "No pudimos abrir Google.",
+      )
+      setLoading(false)
+    }
+  }
+
   return (
-    <Button
-      variant="outline"
-      className="w-full gap-3"
-      render={<Link href={href} />}
-    >
-      <GoogleIcon />
-      {label}
-    </Button>
+    <div className="space-y-2">
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full gap-3"
+        disabled={disabled || loading}
+        onClick={() => void onClick()}
+      >
+        <GoogleIcon />
+        {loading ? "Redirigiendo…" : label}
+      </Button>
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+    </div>
   )
 }

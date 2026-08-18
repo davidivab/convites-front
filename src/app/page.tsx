@@ -63,27 +63,26 @@ export default async function HomePage() {
               </h1>
 
               <p className="mt-5 max-w-xl text-base leading-relaxed text-background/85 md:text-lg">
-                Plataforma ciudadana de convites comunitarios en las zonas
-                afectadas de Risaralda. No somos fundación ni empresa: somos
-                vecinos organizándonos.
+                Vecinos organizando convites en las zonas afectadas de Risaralda.
+                No somos fundación ni empresa.
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Button
                   size="lg"
                   className="h-12 px-6 text-base"
-                  render={<Link href="/explorar" />}
+                  render={<Link href="/crear" />}
                 >
-                  <span>Explorar iniciativas</span>
+                  <span>Crear un convite</span>
                   <ArrowRight data-icon="inline-end" />
                 </Button>
                 <Button
                   variant="outline"
                   size="lg"
                   className="h-12 border-background/30 bg-background/10 px-6 text-base text-background backdrop-blur-sm hover:bg-background/20 hover:text-background"
-                  render={<Link href="/crear" />}
+                  render={<Link href="/explorar" />}
                 >
-                  Crear un convite
+                  Explorar convites
                 </Button>
               </div>
             </div>
@@ -128,6 +127,27 @@ export default async function HomePage() {
               ))}
             </div>
           )}
+        </section>
+
+        <section className="mx-auto w-full max-w-6xl px-4 pb-16">
+          <div className="flex flex-col items-start gap-6 rounded-2xl border border-border bg-card px-6 py-10 md:flex-row md:items-center md:justify-between md:px-10">
+            <div className="max-w-xl">
+              <h2 className="font-serif text-2xl font-semibold text-balance text-foreground md:text-3xl">
+                ¿Tu barrio o vereda necesita un convite?
+              </h2>
+              <p className="mt-2 text-pretty leading-relaxed text-muted-foreground">
+                Contá qué pasó y qué falta. Lo revisamos y lo hacemos llegar a
+                más gente.
+              </p>
+            </div>
+            <Button
+              size="lg"
+              className="shrink-0"
+              render={<Link href="/crear" />}
+            >
+              Crear un convite
+            </Button>
+          </div>
         </section>
       </main>
 

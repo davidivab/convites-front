@@ -26,6 +26,7 @@ export function AportarClient({ iniciativa }: { iniciativa: Iniciativa }) {
   const [anonimo, setAnonimo] = useState(false);
   const [puntoAcopioId, setPuntoAcopioId] = useState<string>("");
   const [confirmado, setConfirmado] = useState(false);
+  const [mostrarCompromiso, setMostrarCompromiso] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,6 +44,17 @@ export function AportarClient({ iniciativa }: { iniciativa: Iniciativa }) {
 
   const totalItems = seleccionados.reduce((acc, s) => acc + s.cantidad, 0);
   const puedeConfirmar = totalItems > 0 || asisto;
+
+  function pedirConfirmacion() {
+    if (!token) {
+      router.push(
+        `/ingresar?next=${encodeURIComponent(`/iniciativa/${iniciativa.slug}/aportar`)}`,
+      );
+      return;
+    }
+    setError(null);
+    setMostrarCompromiso(true);
+  }
 
   async function confirmar() {
     if (!token) {
@@ -70,6 +82,7 @@ export function AportarClient({ iniciativa }: { iniciativa: Iniciativa }) {
           cantidad,
         })),
       });
+      setMostrarCompromiso(false);
       setConfirmado(true);
     } catch (e) {
       const message =
@@ -79,6 +92,7 @@ export function AportarClient({ iniciativa }: { iniciativa: Iniciativa }) {
             ? e.message
             : "No pudimos registrar tu aporte.";
       setError(message);
+      setMostrarCompromiso(false);
     } finally {
       setSubmitting(false);
     }
@@ -344,12 +358,70 @@ export function AportarClient({ iniciativa }: { iniciativa: Iniciativa }) {
             size="lg"
             className="h-11 shrink-0 px-6 text-base"
             disabled={!puedeConfirmar || submitting}
-            onClick={() => void confirmar()}
+            onClick={pedirConfirmacion}
           >
-            {submitting ? "Guardando…" : "Confirmar aporte"}
+            Confirmar aporte
           </Button>
         </div>
       </div>
+
+      {mostrarCompromiso ? (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/50 p-4 sm:items-center"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="compromiso-titulo"
+        >
+          <div className="w-full max-w-md rounded-2xl border border-border bg-background p-6 shadow-lg">
+            <h2
+              id="compromiso-titulo"
+              className="font-serif text-xl font-semibold text-foreground"
+            >
+              Este aporte es un compromiso serio
+            </h2>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              Al confirmar, otras personas y el organizador van a contar con lo
+              que ofrecés. Si no podés cumplirlo, cancelá o ajustá el aporte
+              antes del convite. No registres cantidades que no vas a llevar.
+            </p>
+            {(seleccionados.length > 0 || asisto) && (
+              <ul className="mt-4 rounded-xl border border-border bg-card px-4 py-3 text-sm">
+                {seleccionados.map(({ item, cantidad }) => (
+                  <li
+                    key={item.id}
+                    className="flex justify-between gap-3 py-1 text-foreground"
+                  >
+                    <span>{item.nombre}</span>
+                    <span className="font-semibold tabular-nums">
+                      {cantidad} {item.unidad}
+                    </span>
+                  </li>
+                ))}
+                {asisto ? (
+                  <li className="py-1 text-foreground">
+                    Asistencia al convite
+                  </li>
+                ) : null}
+              </ul>
+            )}
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button
+                variant="outline"
+                disabled={submitting}
+                onClick={() => setMostrarCompromiso(false)}
+              >
+                Revisar de nuevo
+              </Button>
+              <Button
+                disabled={submitting}
+                onClick={() => void confirmar()}
+              >
+                {submitting ? "Guardando…" : "Sí, me comprometo"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

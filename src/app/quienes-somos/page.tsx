@@ -97,11 +97,11 @@ export default function QuienesSomosPage() {
           <div className="flex flex-col items-start gap-6 rounded-2xl bg-primary px-6 py-10 text-primary-foreground md:flex-row md:items-center md:justify-between md:px-12">
             <div className="max-w-xl">
               <h2 className="text-balance font-serif text-2xl md:text-3xl">
-                ¿Tu comunidad necesita un convite?
+                ¿Tu barrio o vereda necesita un convite?
               </h2>
               <p className="mt-2 text-pretty leading-relaxed text-primary-foreground/80">
-                Abrí uno, contá qué pasó y qué hace falta. Nosotros te ayudamos a
-                que llegue a más gente.
+                Contá qué pasó y qué falta. Lo revisamos y lo hacemos llegar a
+                más gente.
               </p>
             </div>
             <Button
@@ -110,7 +110,7 @@ export default function QuienesSomosPage() {
               render={<Link href="/crear" />}
               className="shrink-0"
             >
-              Abrir un convite
+              Crear un convite
             </Button>
           </div>
 

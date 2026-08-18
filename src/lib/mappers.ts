@@ -84,10 +84,20 @@ export function mapIniciativa(api: ApiIniciativa): Iniciativa {
           : p.municipio.nombre
         : "Sin ciudad",
     })),
+    galeria: (api.galeria ?? []).map((g) => ({
+      id: String(g.id),
+      url: g.url,
+    })),
+    enlaces: (api.enlaces ?? []).map((e) => ({
+      id: String(e.id),
+      titulo: e.titulo,
+      url: e.url,
+    })),
     ayudantes: [],
     asistentes: api.asistentes_count ?? 0,
     progreso: api.progreso ?? 0,
     version: api.version,
+    wizardPaso: api.wizard_paso ?? null,
     enlaceExterno: api.enlace_externo
       ? {
           plataforma: api.enlace_externo.plataforma,
@@ -121,6 +131,7 @@ export function mapCentro(api: ApiCentro): Centro {
           }
         : undefined,
     emergencia: api.emergencia,
+    urlExterna: api.url_externa ?? null,
   };
 }
 

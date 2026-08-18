@@ -5,6 +5,96 @@ Sesión agente 2026-08-16 (loop 5h + trabajo previo en la misma chat).
 
 ---
 
+### [F33] Explorar: intro colapsable + filtros en selects/URL — 2026-08-18
+- Intro “Convites abiertos en Risaralda” oculta completa; chevron **fuera** de la section
+- Filtros: selects + botón Filtrar; estado en query (`q`, `zona`, `categoria`, `urgencia`, `orden`, `dir`, `seccion`, `vista`)
+- Filtrado aún en cliente → pedido API **P48** (sort + zona slug + server-side)
+- UX: barra compacta (buscar + Filtros con badge); selects en **drawer lateral** derecha (overlay, Escape, Limpiar)
+
+### [F32] Landing: copy, CTA e ilustración (Patricia) — 2026-08-18
+- Copy hero/footer/Cómo funciona recortado; CTA principal “Crear un convite” (header/footer/crear/quiénes somos)
+- Sección “¿Tu barrio…?” solo con crear (sin “quiénes somos”)
+- Ilustración en Cómo funciona (`public/images/como-funciona-convite.png`)
+- Alerta de compromiso serio antes de confirmar aporte
+
+### [F34] Pestaña Materiales en Explorar — 2026-08-18
+- `GET /api/materiales` + `fetchMateriales` / `ApiMaterial` / `MaterialCard`
+- Tabs Convites | Materiales; mismos filtros (zona/categoría/urgencia/q); click → `/iniciativa/{slug}`
+
+### [F31] Google login → registrarse si no hay cuenta — 2026-08-17
+- Ack P47: `intent`, `needs_registration`, BFF `completar-registro`, `/registrarse` sin password
+- Smoke E2E real requiere `GOOGLE_*` configurado
+
+### [F29] Solicitudes moderador/voluntario (UI + client) — 2026-08-17
+- Ack Claude P46 completo (3/3): pestañas `/panel/roles/*`, cola admin, copy profesional = pendiente hasta aprobar
+- Rol profesional solo tras moderación (P46-3)
+
+### [F30] Menú unificado en header (dropdown cuenta) — 2026-08-17
+- Sacada barra PanelMenu duplicada del `DashboardShell`
+- Dropdown desde el nombre: secciones por rol + Cerrar sesión; un solo “Mi perfil”
+
+### [F29-parcial] Esqueleto solicitudes de rol (espera P46) — 2026-08-17
+- Nav ciudadano: Moderador / Profesional / Voluntario; páginas solicitud; admin cola
+- Client `solicitudes-rol`; admin ya no crea mod/vol con email/password
+- Smoke E2E bloqueado por API P46
+
+### [F27] Checkbox términos/descargo en /ingresar y /registrarse — 2026-08-17
+- `AceptacionesLegales` compartido; gate Google + correo/Continuar hasta marcar ambos
+
+### [F28] Panel cuentas demo en /ingresar (dev) — 2026-08-17
+- Tabla CUENTAS_DEMO + botón Usar (autocompleta email/password); `NODE_ENV !== "production"`
+
+### [F26] Puntos de censo de afectaciones en /centros — 2026-08-17
+- Ack P45: filtro `censo`, banner portal sospereira.com, links `urlExterna` en cada punto
+
+### [F20] Login Google en /ingresar (+ registrarse) — 2026-08-17
+- Ack P42: BFF `redirect`/`exchange`, callback `/auth/google/callback`, `GoogleButton` real
+- Cookie httpOnly; `completeGoogleLogin` en AuthProvider
+- Smoke E2E requiere `GOOGLE_*` + `GOOGLE_FRONTEND_CALLBACK_URL` → front (ej. `:3095/auth/google/callback`)
+
+### [P39] UI quitar evidencia de aporte — 2026-08-17
+- Ack Claude DELETE `/aportes/{id}/evidencia`; botón en `AportanteRow` (creador/admin/mod editar)
+
+### [F23] Panel profesional: solicitudes estado + notas — 2026-08-17
+- Ack P44: tabs Perfil/Solicitudes; PATCH estado + nota acumulable; `patchSolicitudProfesional`
+
+### [F25] Creador detener/cerrar convite — 2026-08-17
+- Ack P43: botón **Detener** en panel creador + editar (`cerrarIniciativa`)
+
+### [P38] Admin list search + contacto — 2026-08-17 (Cursor)
+- `q` ≥3 busca título/resumen/slug/tel/responsable/creador; index trae `verificacion` (admin); front F12 usa tel
+
+### [F19]+[P41] Moderador editar convite — 2026-08-17
+- API: PUT middleware `update_own|moderate` + `ModeratorIniciativaUpdateTest` (2)
+- Front: `/moderacion/convites/[slug]/editar` + link en cola; `IniciativaEditarClient` compartido
+
+### [F24] Nav/guards staff (ack Claude) — 2026-08-17
+- Ya resuelto en F15–F18: decisión producto = mod/admin **no** ven aportante/organizador
+- Admin entra a `/moderacion` y `/perfil`; perfilTabs + dashboardItemsForRole
+
+### [F21]+[F22] Panel creador: editar + pestaña aportantes — 2026-08-17
+- `/panel/creador/[slug]/editar` con tabs Datos / Aportantes + `updateIniciativa`
+- Botón Editar en listado; API `verificacion` en resource para owner/mod (Cursor)
+- Cerrar/detener owner sigue en P43
+
+### [F14] Admin editar convite — 2026-08-17
+- `/admin/convites/[slug]/editar` + `updateIniciativa` (PUT + version)
+- Formulario: título, resumen, historia, urgencia, cat/municipio, lugar, fechas, verificación
+
+### [F13] Admin detalle: aportes + evidencias — 2026-08-17
+- `AportanteRow` compartido; recepción/evidencia vía `POST /aportes/{id}/recepcion` en `/admin/convites/[slug]`
+- Link a editar (F14); delete evidencia espera P39
+
+### [F12] Admin convites: paginador + búsqueda ≥3 + columnas — 2026-08-17
+- Debounce desde 3ª letra → `q`; paginación `meta`; columnas Evolución % y Contacto (creador; tel vía P38)
+- `fetchAdminIniciativas` acepta `page`
+
+### [F15]+[F16]+[F17]+[F18] Nav / role-tree staff — 2026-08-17
+- `dashboardItemsForRole` + `perfilTabsForRole`: admin/mod solo ven sus paneles
+- `/moderacion` admite admin+moderador; `/perfil` abre a todos los árboles
+- Tabs muertos de aportante/organizador quitados en moderación
+- Tests role-tree 12 passed
+
 ### [P35] Smoke aporte con punto de acopio — 2026-08-17
 - Confirmado service: aportante2 → Quibdó demo con punto Bogotá; selector F7 ya cableado
 

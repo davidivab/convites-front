@@ -29,8 +29,6 @@ export const config = {
     "/moderacion/:path*",
     "/admin",
     "/admin/:path*",
-    "/registro-profesional",
-    "/registro-profesional/:path*",
     "/perfil",
     "/perfil/:path*",
   ],

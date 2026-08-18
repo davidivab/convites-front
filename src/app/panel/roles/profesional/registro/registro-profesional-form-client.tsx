@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -14,13 +13,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { BrandMark } from "@/components/layout/brand-mark"
+import { DashboardShell } from "@/components/layout/dashboard-shell"
 import { DepartamentoMunicipioSelect } from "@/components/ui/departamento-municipio-select"
 import { PhoneInput, isPhoneValid } from "@/components/ui/phone-input"
-import { useRequireAuth } from "@/hooks/use-require-auth"
+import { useRequireRoleTree } from "@/hooks/use-require-role-tree"
 import { ApiError } from "@/lib/api"
 import { registrarProfesional } from "@/lib/convites-api"
 import { AREA_PROFESIONAL, type AreaProfesional } from "@/lib/data"
+import { perfilTabsForRole } from "@/lib/role-tree"
 import {
   ArrowLeft,
   Check,
@@ -31,7 +31,6 @@ import {
   Clock,
   Info,
 } from "lucide-react"
-import { cn } from "@/lib/utils"
 
 const AREAS = Object.entries(AREA_PROFESIONAL) as [
   AreaProfesional,
@@ -49,6 +48,8 @@ const TIPOS_ACEPTADOS = ".pdf,.jpg,.jpeg,.png"
 const MAX_MB = 5
 const MAX_ARCHIVOS = 5
 
+const RUTA = "/panel/roles/profesional/registro"
+
 type Archivo = { id: string; nombre: string; tamano: number; file: File }
 
 function formatoTamano(bytes: number) {
@@ -57,9 +58,14 @@ function formatoTamano(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-export function RegistroProfesionalClient() {
-  const { token, user, loading: authLoading } = useRequireAuth("/registro-profesional")
-  const router = useRouter()
+export function RegistroProfesionalFormClient() {
+  const { token, user, loading: authLoading } = useRequireRoleTree(RUTA, [
+    "aportante",
+    "moderador",
+    "profesional",
+  ])
+  const tabs = perfilTabsForRole(user, "/panel/roles/profesional")
+
   const [done, setDone] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
@@ -158,64 +164,63 @@ export function RegistroProfesionalClient() {
     }
   }
 
-  if (authLoading || !token) {
+  if (authLoading || !token || !user) {
     return (
-      <div className="mx-auto max-w-2xl px-4 py-20 text-center text-sm text-muted-foreground">
-        Comprobando sesión…
+      <div className="mx-auto max-w-6xl px-4 py-16 text-center text-sm text-muted-foreground">
+        Cargando…
       </div>
     )
   }
 
   if (done) {
     return (
-      <div className="mx-auto flex max-w-xl flex-col items-center gap-6 px-6 py-20 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/15 text-primary">
-          <Clock className="h-8 w-8" />
+      <DashboardShell
+        title="Solicitud enviada"
+        subtitle="Tu perfil profesional quedó pendiente de aprobación."
+        tabs={tabs}
+      >
+        <div className="mx-auto flex max-w-xl flex-col items-center gap-6 py-8 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/15 text-primary">
+            <Clock className="h-8 w-8" />
+          </div>
+          <div className="space-y-3">
+            <h2 className="text-pretty font-serif text-2xl text-foreground">
+              Recibimos tu registro, {nombre.split(" ")[0] || "profesional"}
+            </h2>
+            <p className="text-pretty leading-relaxed text-muted-foreground">
+              Tu solicitud quedó <strong>pendiente de aprobación</strong>. Aún no
+              tienes el rol de profesional: un moderador o admin revisará tu
+              perfil y, al aprobarlo, te avisaremos por correo y aparecerás en
+              Manos profesionales.
+            </p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-3">
+            <Button render={<Link href="/panel/roles/profesional" />}>
+              Volver a Ser profesional
+            </Button>
+            <Button variant="outline" render={<Link href="/panel/profesional" />}>
+              Ir a mi panel profesional
+            </Button>
+          </div>
         </div>
-        <div className="space-y-3">
-          <h1 className="text-pretty font-serif text-3xl text-foreground">
-            Recibimos tu registro, {nombre.split(" ")[0] || "profesional"}
-          </h1>
-          <p className="text-pretty leading-relaxed text-muted-foreground">
-            Un miembro del equipo revisará tu perfil. Cuando quede aprobado te
-            avisaremos por correo y aparecerás en Manos profesionales.
-          </p>
-        </div>
-        <div className="flex flex-wrap justify-center gap-3">
-          <Button render={<Link href="/manos-profesionales" />}>
-            Volver a Manos profesionales
-          </Button>
-          <Button variant="outline" render={<Link href="/explorar" />}>
-            Ver convites abiertos
-          </Button>
-        </div>
-      </div>
+      </DashboardShell>
     )
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10 md:py-14">
-      <BrandMark className="mb-8" />
-
+    <DashboardShell
+      title="Registro profesional"
+      subtitle="Completa tus datos y documentos. Verificamos título y certificados antes de publicar tu perfil."
+      tabs={tabs}
+    >
       <Link
-        href="/manos-profesionales"
-        className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        href="/panel/roles/profesional"
+        className="mb-6 inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
-        <ArrowLeft className="h-4 w-4" /> Volver a Manos profesionales
+        <ArrowLeft className="h-4 w-4" /> Volver a Ser profesional
       </Link>
 
-      <div className="mb-8">
-        <p className="text-sm font-medium text-primary">Voluntariado especializado</p>
-        <h1 className="mt-2 text-balance font-serif text-3xl text-foreground md:text-4xl">
-          Regístrate como profesional
-        </h1>
-        <p className="mt-3 max-w-lg text-pretty leading-relaxed text-muted-foreground">
-          Para cuidar a la comunidad, verificamos que cada profesional esté
-          debidamente autorizado. Completa tus datos antes de publicar tu perfil.
-        </p>
-      </div>
-
-      <div className="space-y-6 rounded-xl border border-border bg-card p-6 md:p-8">
+      <div className="mx-auto max-w-2xl space-y-6 rounded-xl border border-border bg-card p-6 md:p-8">
         <div className="space-y-5">
           <div className="space-y-2">
             <Label htmlFor="nombre">Nombre completo</Label>
@@ -249,12 +254,13 @@ export function RegistroProfesionalClient() {
           <DepartamentoMunicipioSelect
             municipioId={municipioId}
             onMunicipioChange={setMunicipioId}
+            municipioLabel="Ciudad"
             required
           />
           <div className="space-y-2">
             <Label htmlFor="area">Área profesional</Label>
             <Select
-              value={area}
+              value={area || undefined}
               onValueChange={(v) => setArea(v ?? "")}
               items={AREAS.map(([value, info]) => ({
                 value,
@@ -390,13 +396,13 @@ export function RegistroProfesionalClient() {
             }}
           />
 
-          {error && (
+          {error ? (
             <p className="flex items-center gap-1.5 text-sm text-destructive">
               <Info className="h-4 w-4" /> {error}
             </p>
-          )}
+          ) : null}
 
-          {archivos.length > 0 && (
+          {archivos.length > 0 ? (
             <ul className="space-y-2">
               {archivos.map((a) => (
                 <li
@@ -423,7 +429,7 @@ export function RegistroProfesionalClient() {
                 </li>
               ))}
             </ul>
-          )}
+          ) : null}
         </div>
 
         <label className="flex cursor-pointer items-start gap-3 border-t border-border pt-6">
@@ -454,13 +460,7 @@ export function RegistroProfesionalClient() {
           <Check className="h-4 w-4" />{" "}
           {submitting ? "Enviando…" : "Enviar para verificación"}
         </Button>
-
-        {!certificadosOk && (
-          <p className={cn("text-center text-xs text-muted-foreground")}>
-            Adjunta al menos un certificado para poder enviar tu registro.
-          </p>
-        )}
       </div>
-    </div>
+    </DashboardShell>
   )
 }

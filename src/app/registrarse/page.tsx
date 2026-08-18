@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { Suspense } from "react"
 import { RegistrarseClient } from "./registrarse-client"
 
 export const metadata: Metadata = {
@@ -8,5 +9,15 @@ export const metadata: Metadata = {
 }
 
 export default function RegistrarsePage() {
-  return <RegistrarseClient />
+  return (
+    <Suspense
+      fallback={
+        <p className="mx-auto max-w-sm px-6 py-16 text-center text-sm text-muted-foreground">
+          Cargando registro…
+        </p>
+      }
+    >
+      <RegistrarseClient />
+    </Suspense>
+  )
 }

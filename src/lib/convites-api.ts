@@ -8,6 +8,7 @@ import type {
   ApiDisponibilidad,
   ApiHabilidad,
   ApiIniciativa,
+  ApiMaterial,
   ApiMunicipio,
   ApiProfesional,
   ApiProfile,
@@ -47,6 +48,42 @@ export async function fetchIniciativas(params?: {
   return (res.data ?? []).map(mapIniciativa);
 }
 
+/** Búsqueda inversa: materiales que aún faltan en convites abiertos. */
+export async function fetchMateriales(params?: {
+  zona?: string;
+  municipio?: string;
+  departamento?: string;
+  categoria?: string;
+  urgencia?: string;
+  q?: string;
+  per_page?: number;
+  page?: number;
+  token?: string | null;
+  server?: boolean;
+  revalidate?: number;
+}): Promise<ApiMaterial[]> {
+  const qs = new URLSearchParams();
+  if (params?.zona) qs.set("zona", params.zona);
+  if (params?.municipio) qs.set("municipio", params.municipio);
+  if (params?.departamento) qs.set("departamento", params.departamento);
+  if (params?.categoria) qs.set("categoria", params.categoria);
+  if (params?.urgencia) qs.set("urgencia", params.urgencia);
+  if (params?.q) qs.set("q", params.q);
+  qs.set("per_page", String(params?.per_page ?? 50));
+  if (params?.page) qs.set("page", String(params.page));
+
+  const res = await apiFetch<Paginated<ApiMaterial>>(
+    `/api/materiales?${qs.toString()}`,
+    {},
+    {
+      server: params?.server,
+      token: params?.token,
+      revalidate: params?.revalidate,
+    },
+  );
+  return res.data ?? [];
+}
+
 export async function fetchIniciativa(
   slug: string,
   options?: { token?: string | null; server?: boolean },
@@ -57,6 +94,19 @@ export async function fetchIniciativa(
     { server: options?.server, token: options?.token },
   );
   return mapIniciativa(res.data);
+}
+
+/** Raw API shape (incluye version / verificacion para owner). */
+export async function fetchIniciativaApi(
+  slug: string,
+  token?: string | null,
+): Promise<ApiIniciativa> {
+  const res = await apiFetch<{ data: ApiIniciativa }>(
+    `/api/iniciativas/${encodeURIComponent(slug)}`,
+    {},
+    { token },
+  );
+  return res.data;
 }
 
 export async function fetchMisIniciativas(token: string): Promise<Iniciativa[]> {
@@ -83,6 +133,93 @@ export async function createIniciativa(
     { token },
   );
   return mapIniciativa(res.data);
+}
+
+export async function updateIniciativa(
+  token: string,
+  id: string | number,
+  payload: Record<string, unknown>,
+): Promise<ApiIniciativa> {
+  const res = await apiFetch<{ data: ApiIniciativa }>(
+    `/api/iniciativas/${id}`,
+    { method: "PUT", body: JSON.stringify(payload) },
+    { token },
+  );
+  return res.data;
+}
+
+export async function uploadIniciativaPortada(
+  token: string,
+  id: string | number,
+  blob: Blob,
+  filename = "portada.jpg",
+): Promise<ApiIniciativa> {
+  const form = new FormData();
+  form.append("imagen", blob, filename);
+  const res = await apiFetch<{ data: ApiIniciativa }>(
+    `/api/iniciativas/${id}/imagen-portada`,
+    { method: "POST", body: form },
+    { token },
+  );
+  return res.data;
+}
+
+export async function uploadIniciativaGaleria(
+  token: string,
+  id: string | number,
+  blob: Blob,
+  filename = "foto.jpg",
+): Promise<{
+  id: number;
+  url: string;
+  orden: number;
+  ancho: number;
+  alto: number;
+  version: number;
+}> {
+  const form = new FormData();
+  form.append("imagen", blob, filename);
+  const res = await apiFetch<{
+    data: {
+      id: number;
+      url: string;
+      orden: number;
+      ancho: number;
+      alto: number;
+      version: number;
+    };
+  }>(`/api/iniciativas/${id}/galeria`, { method: "POST", body: form }, { token });
+  return res.data;
+}
+
+export async function deleteIniciativaGaleria(
+  token: string,
+  iniciativaId: string | number,
+  galeriaId: string | number,
+): Promise<ApiIniciativa> {
+  const res = await apiFetch<{ data: ApiIniciativa }>(
+    `/api/iniciativas/${iniciativaId}/galeria/${galeriaId}`,
+    { method: "DELETE" },
+    { token },
+  );
+  return res.data;
+}
+
+/** P43: owner o moderador cierra convite publicada/en_curso */
+export async function cerrarIniciativa(
+  token: string,
+  id: string | number,
+  nota?: string,
+): Promise<ApiIniciativa> {
+  const res = await apiFetch<{ data: ApiIniciativa }>(
+    `/api/iniciativas/${id}/cerrar`,
+    {
+      method: "POST",
+      body: JSON.stringify(nota ? { nota } : {}),
+    },
+    { token },
+  );
+  return res.data;
 }
 
 export async function enviarRevision(token: string, id: string | number) {
@@ -139,6 +276,19 @@ export async function marcarAporteRecepcion(
     { method: "POST", body: form },
     { token },
   );
+}
+
+/** P39: borra solo el archivo; el estado del aporte no cambia. */
+export async function eliminarEvidenciaAporte(
+  token: string,
+  aporteId: number,
+): Promise<ApiAporte> {
+  const res = await apiFetch<{ data: ApiAporte }>(
+    `/api/aportes/${aporteId}/evidencia`,
+    { method: "DELETE" },
+    { token },
+  );
+  return res.data;
 }
 
 export async function cancelarAporte(token: string, aporteId: number) {
@@ -343,15 +493,43 @@ export type ApiAdminUser = {
 
 export async function fetchAdminUsers(
   token: string,
-  role?: "moderator" | "voluntario",
-): Promise<ApiAdminUser[]> {
-  const q = role ? `?role=${role}` : "";
+  params?: {
+    role?: "moderator" | "voluntario" | "admin" | "member" | "profesional";
+    scope?: "all" | "staff";
+    q?: string;
+    sort?: "name" | "email" | "created_at";
+    order?: "asc" | "desc";
+    per_page?: number;
+    page?: number;
+  },
+): Promise<{
+  data: ApiAdminUser[];
+  meta?: { current_page?: number; last_page?: number; total?: number };
+}> {
+  const qs = new URLSearchParams();
+  if (params?.role) qs.set("role", params.role);
+  if (params?.scope) qs.set("scope", params.scope);
+  if (params?.q?.trim()) qs.set("q", params.q.trim());
+  if (params?.sort) qs.set("sort", params.sort);
+  if (params?.order) qs.set("order", params.order);
+  if (params?.per_page) qs.set("per_page", String(params.per_page));
+  if (params?.page) qs.set("page", String(params.page));
+  const q = qs.toString() ? `?${qs}` : "";
   const res = await apiFetch<Paginated<ApiAdminUser>>(
     `/api/admin/users${q}`,
     {},
     { token },
   );
-  return res.data ?? [];
+  return {
+    data: res.data ?? [],
+    meta: res.meta
+      ? {
+          current_page: res.meta.current_page,
+          last_page: res.meta.last_page,
+          total: res.meta.total,
+        }
+      : undefined,
+  };
 }
 
 export async function createAdminUser(
@@ -411,6 +589,7 @@ export async function fetchAdminIniciativas(
     q?: string;
     urgencia?: string;
     per_page?: number;
+    page?: number;
   },
 ): Promise<{ data: ApiIniciativa[]; meta?: { current_page?: number; last_page?: number; total?: number } }> {
   const sp = new URLSearchParams();
@@ -419,6 +598,7 @@ export async function fetchAdminIniciativas(
   if (params?.q) sp.set("q", params.q);
   if (params?.urgencia) sp.set("urgencia", params.urgencia);
   if (params?.per_page) sp.set("per_page", String(params.per_page));
+  if (params?.page) sp.set("page", String(params.page));
   const q = sp.toString() ? `?${sp}` : "";
   const res = await apiFetch<Paginated<ApiIniciativa>>(
     `/api/admin/iniciativas${q}`,
@@ -542,8 +722,20 @@ export type ApiProfesionalSolicitud = {
   preferencia_contacto: string | null;
   mensaje: string;
   estado: string | null;
+  estado_label?: string | null;
+  /** Texto acumulado de notas (log con fechas) */
+  nota?: string | null;
   created_at: string | null;
 };
+
+export type EstadoSolicitudProfesional =
+  | "pendiente"
+  | "notificada"
+  | "atendida"
+  | "negada"
+  | "trasladada"
+  | "no_contesta"
+  | "spam";
 
 export async function fetchMiPerfilProfesional(
   token: string,
@@ -583,6 +775,105 @@ export async function fetchMisSolicitudesProfesional(
     { token },
   );
   return res.data ?? [];
+}
+
+export async function patchSolicitudProfesional(
+  token: string,
+  solicitudId: number,
+  payload: { estado?: EstadoSolicitudProfesional; nota?: string },
+): Promise<ApiProfesionalSolicitud> {
+  const res = await apiFetch<{ data: ApiProfesionalSolicitud }>(
+    `/api/mi-perfil-profesional/solicitudes/${solicitudId}`,
+    { method: "PATCH", body: JSON.stringify(payload) },
+    { token },
+  );
+  return res.data;
+}
+
+/** P46 — solicitud de rol moderador | voluntario */
+export type RolSolicitable = "moderador" | "voluntario";
+
+export type EstadoSolicitudRol = "pendiente" | "aprobada" | "rechazada";
+
+export type ApiSolicitudRol = {
+  id: number;
+  rol: RolSolicitable;
+  estado: EstadoSolicitudRol;
+  mensaje: string | null;
+  nota_revision: string | null;
+  municipios: Array<{ id: number; nombre: string; slug?: string }>;
+  user?: { id: number; name: string; email: string } | null;
+  created_at: string | null;
+  revisado_at: string | null;
+};
+
+export async function fetchMisSolicitudesRol(
+  token: string,
+): Promise<ApiSolicitudRol[]> {
+  const res = await apiFetch<{ data: ApiSolicitudRol[] } | Paginated<ApiSolicitudRol>>(
+    "/api/mis-solicitudes-rol",
+    {},
+    { token },
+  );
+  if (Array.isArray(res)) return res;
+  if ("data" in res && Array.isArray(res.data)) return res.data;
+  return [];
+}
+
+export async function crearSolicitudRol(
+  token: string,
+  payload: {
+    rol: RolSolicitable;
+    municipio_ids: number[];
+    mensaje?: string;
+  },
+): Promise<ApiSolicitudRol> {
+  const res = await apiFetch<{ data: ApiSolicitudRol }>(
+    "/api/solicitudes-rol",
+    { method: "POST", body: JSON.stringify(payload) },
+    { token },
+  );
+  return res.data;
+}
+
+export async function fetchAdminSolicitudesRol(
+  token: string,
+  params?: { estado?: EstadoSolicitudRol; rol?: RolSolicitable },
+): Promise<ApiSolicitudRol[]> {
+  const q = new URLSearchParams();
+  if (params?.estado) q.set("estado", params.estado);
+  if (params?.rol) q.set("rol", params.rol);
+  const qs = q.toString();
+  const res = await apiFetch<
+    { data: ApiSolicitudRol[] } | Paginated<ApiSolicitudRol>
+  >(`/api/admin/solicitudes-rol${qs ? `?${qs}` : ""}`, {}, { token });
+  if ("data" in res && Array.isArray(res.data)) return res.data;
+  return [];
+}
+
+export async function aprobarSolicitudRol(
+  token: string,
+  id: number,
+): Promise<ApiSolicitudRol> {
+  const res = await apiFetch<{ data: ApiSolicitudRol }>(
+    `/api/admin/solicitudes-rol/${id}/aprobar`,
+    { method: "POST", body: JSON.stringify({}) },
+    { token },
+  );
+  return res.data;
+}
+
+export async function rechazarSolicitudRol(
+  token: string,
+  id: number,
+  nota_revision: string,
+): Promise<ApiSolicitudRol> {
+  const res = await apiFetch<{ data: ApiSolicitudRol }>(
+    `/api/admin/solicitudes-rol/${id}/rechazar`,
+    { method: "POST", body: JSON.stringify({ nota_revision }) },
+    { token },
+  );
+  return res.data;
 }
 
 // silence unused for now — used by client components via getStoredToken

@@ -34,8 +34,17 @@ const nextConfig: NextConfig = {
         port: "8095",
         pathname: "/storage/**",
       },
-      // S3 / CDN (P23 + P27 URLs absolutas)
-      { protocol: "https", hostname: "*.amazonaws.com", pathname: "/**" },
+      // S3 bucket / regional host (uploads bajo /convites/…)
+      {
+        protocol: "https",
+        hostname: "ivo-genericos.s3.amazonaws.com",
+        pathname: "/convites/**",
+      },
+      {
+        protocol: "https",
+        hostname: "ivo-genericos.s3.us-east-1.amazonaws.com",
+        pathname: "/convites/**",
+      },
     ],
   },
   async headers() {

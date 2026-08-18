@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -13,20 +13,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { AceptacionesLegales } from "@/components/auth/aceptaciones-legales"
 import { GoogleButton } from "@/components/auth/google-button"
 import { BrandMark } from "@/components/layout/brand-mark"
 import { useAuth } from "@/components/auth/auth-provider"
 import { DepartamentoMunicipioSelect } from "@/components/ui/departamento-municipio-select"
 import { PhoneInput, isPhoneValid } from "@/components/ui/phone-input"
+import { Textarea } from "@/components/ui/textarea"
 import { ApiError } from "@/lib/api"
-import { updateProfile } from "@/lib/convites-api"
-import {
-  HABILIDADES_MANUALES,
-  HABILIDADES_CONOCIMIENTO,
-  DISPONIBILIDAD,
-  APTITUD_FISICA,
-  GENEROS,
-} from "@/lib/data"
+import { fetchCatalogos } from "@/lib/convites-api"
+import { APTITUD_FISICA, GENEROS } from "@/lib/data"
+import type { ApiDisponibilidad, ApiHabilidad } from "@/lib/types"
 import {
   Check,
   ArrowLeft,
@@ -63,11 +60,13 @@ function Chip({
 }
 
 export function RegistrarseClient() {
-  const { register } = useAuth()
+  const { register, completeGoogleRegistro } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [step, setStep] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [googleCode, setGoogleCode] = useState<string | null>(null)
 
   // Paso 0 — contacto
   const [nombre, setNombre] = useState("")
@@ -81,34 +80,75 @@ export function RegistrarseClient() {
   const [aptitud, setAptitud] = useState("")
   const [salud, setSalud] = useState("")
   const [municipioId, setMunicipioId] = useState("")
+  const [barrio, setBarrio] = useState("")
 
-  // Paso 2 — habilidades
-  const [manuales, setManuales] = useState<string[]>([])
-  const [conocimiento, setConocimiento] = useState<string[]>([])
-  const [disponibilidad, setDisponibilidad] = useState<string[]>([])
+  // Paso 2 — habilidades (IDs del catálogo API)
+  const [habilidadIds, setHabilidadIds] = useState<number[]>([])
+  const [disponibilidadIds, setDisponibilidadIds] = useState<number[]>([])
+  const [habilidades, setHabilidades] = useState<ApiHabilidad[]>([])
+  const [disponibilidades, setDisponibilidades] = useState<ApiDisponibilidad[]>(
+    [],
+  )
+  const [catalogLoading, setCatalogLoading] = useState(true)
 
   // Aceptaciones obligatorias para crear la cuenta
   const [aceptaTerminos, setAceptaTerminos] = useState(false)
   const [aceptaDescargo, setAceptaDescargo] = useState(false)
 
-  function toggle(
-    value: string,
-    list: string[],
-    setList: (v: string[]) => void,
+  useEffect(() => {
+    const fromQuery = searchParams.get("google_code")
+    let fromSession: string | null = null
+    try {
+      fromSession = sessionStorage.getItem("convites_google_pending_code")
+    } catch {
+      // ignore
+    }
+    const code = fromQuery || fromSession
+    if (code) setGoogleCode(code)
+  }, [searchParams])
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadCatalog() {
+      setCatalogLoading(true)
+      try {
+        const cat = await fetchCatalogos(false)
+        if (cancelled) return
+        setHabilidades(cat.habilidades)
+        setDisponibilidades(cat.disponibilidades)
+      } catch {
+        if (!cancelled) {
+          setHabilidades([])
+          setDisponibilidades([])
+        }
+      } finally {
+        if (!cancelled) setCatalogLoading(false)
+      }
+    }
+    void loadCatalog()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const viaGoogle = Boolean(googleCode)
+  const manuales = habilidades.filter((h) => h.tipo === "manual")
+  const conocimiento = habilidades.filter((h) => h.tipo === "conocimiento")
+
+  function toggleId(
+    id: number,
+    list: number[],
+    setList: (v: number[]) => void,
   ) {
-    setList(
-      list.includes(value)
-        ? list.filter((v) => v !== value)
-        : [...list, value],
-    )
+    setList(list.includes(id) ? list.filter((x) => x !== id) : [...list, id])
   }
 
   const canContinue =
     (step === 0 &&
-      nombre.trim() &&
+      aceptaTerminos &&
+      aceptaDescargo &&
       isPhoneValid(celular, true) &&
-      correo.trim() &&
-      password.trim()) ||
+      (viaGoogle || (nombre.trim() && correo.trim() && password.trim()))) ||
     step === 1 ||
     step === 2
 
@@ -117,33 +157,66 @@ export function RegistrarseClient() {
     setSubmitting(true)
     setError(null)
     try {
+      const perfilOpcional = {
+        ...(celular.trim() ? { celular: celular.trim() } : {}),
+        ...(municipioId ? { municipio_id: Number(municipioId) } : {}),
+        ...(barrio.trim() ? { barrio: barrio.trim() } : {}),
+        ...(genero ? { genero } : {}),
+        ...(edad ? { edad: Number(edad) } : {}),
+        ...(aptitud ? { aptitud_fisica: aptitud } : {}),
+        ...(salud.trim() ? { notas_salud: salud.trim() } : {}),
+        ...(habilidadIds.length ? { habilidad_ids: habilidadIds } : {}),
+        ...(disponibilidadIds.length
+          ? { disponibilidad_ids: disponibilidadIds }
+          : {}),
+      }
+
+      if (viaGoogle && googleCode) {
+        await completeGoogleRegistro({
+          code: googleCode,
+          acepta_terminos: true,
+          acepta_descargo: true,
+          ...perfilOpcional,
+        })
+        try {
+          sessionStorage.removeItem("convites_google_pending_code")
+        } catch {
+          // ignore
+        }
+        router.push("/panel/aportante")
+        return
+      }
+
       await register({
         name: nombre.trim(),
         email: correo.trim(),
         password,
         password_confirmation: password,
+        ...perfilOpcional,
       })
-      if (municipioId || genero || edad || aptitud || salud.trim()) {
-        try {
-          await updateProfile("session", {
-            ...(municipioId ? { municipio_id: Number(municipioId) } : {}),
-            ...(genero ? { genero } : {}),
-            ...(edad ? { edad: Number(edad) } : {}),
-            ...(aptitud ? { aptitud_fisica: aptitud } : {}),
-            ...(salud.trim() ? { notas_salud: salud.trim() } : {}),
-            ...(celular.trim() ? { celular: celular.trim() } : {}),
-          })
-        } catch {
-          // Cuenta creada; el perfil se puede completar después.
-        }
-      }
       router.push("/panel/aportante")
     } catch (err) {
-      setError(
+      const msg =
         err instanceof ApiError
           ? err.body.message || "No pudimos crear tu cuenta."
-          : "No pudimos crear tu cuenta.",
-      )
+          : "No pudimos crear tu cuenta."
+      if (
+        err instanceof ApiError &&
+        err.status === 404 &&
+        viaGoogle
+      ) {
+        setError(
+          "Ese código de Google ya no sirve (o tu cuenta ya existe). Entra con Continuar con Google en Ingresar: te autenticamos y, si faltaba algo, te llevamos a terminar el perfil.",
+        )
+        try {
+          sessionStorage.removeItem("convites_google_pending_code")
+        } catch {
+          // ignore
+        }
+        setGoogleCode(null)
+      } else {
+        setError(msg)
+      }
     } finally {
       setSubmitting(false)
     }
@@ -208,23 +281,59 @@ export function RegistrarseClient() {
       <div className="rounded-xl border border-border bg-card p-6 md:p-8">
         {step === 0 && (
           <div className="space-y-6">
-            <GoogleButton href="/explorar" label="Registrarme con Google" />
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <span className="h-px flex-1 bg-border" />
-              <span>o con tu correo</span>
-              <span className="h-px flex-1 bg-border" />
-            </div>
-            <div className="space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="nombre">Nombre completo</Label>
-                <Input
-                  id="nombre"
-                  placeholder="Ej: María Elena Restrepo"
-                  value={nombre}
-                  onChange={(e) => setNombre(e.target.value)}
+            {viaGoogle ? (
+              <p className="rounded-lg border border-primary/25 bg-primary/5 p-4 text-sm text-muted-foreground">
+                Google ya verificó tu identidad. Completa celular, términos y el
+                resto de pasos — nombre y correo salen de tu cuenta de Google; no
+                pedimos contraseña.
+              </p>
+            ) : (
+              <>
+                <AceptacionesLegales
+                  aceptaTerminos={aceptaTerminos}
+                  aceptaDescargo={aceptaDescargo}
+                  onTerminosChange={setAceptaTerminos}
+                  onDescargoChange={setAceptaDescargo}
                 />
-              </div>
-              <div className="grid gap-5 sm:grid-cols-2">
+                <GoogleButton
+                  label="Registrarme con Google"
+                  disabled={!aceptaTerminos || !aceptaDescargo}
+                  intent="register"
+                />
+                {!aceptaTerminos || !aceptaDescargo ? (
+                  <p className="text-xs text-muted-foreground">
+                    Marca términos y descargo para registrarte con Google o
+                    continuar con correo.
+                  </p>
+                ) : null}
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <span className="h-px flex-1 bg-border" />
+                  <span>o con tu correo</span>
+                  <span className="h-px flex-1 bg-border" />
+                </div>
+              </>
+            )}
+            {viaGoogle ? (
+              <AceptacionesLegales
+                aceptaTerminos={aceptaTerminos}
+                aceptaDescargo={aceptaDescargo}
+                onTerminosChange={setAceptaTerminos}
+                onDescargoChange={setAceptaDescargo}
+              />
+            ) : null}
+            <div className="space-y-5">
+              {!viaGoogle ? (
+                <div className="space-y-2">
+                  <Label htmlFor="nombre">Nombre completo</Label>
+                  <Input
+                    id="nombre"
+                    placeholder="Ej: María Elena Restrepo"
+                    value={nombre}
+                    onChange={(e) => setNombre(e.target.value)}
+                  />
+                </div>
+              ) : null}
+              <div className={viaGoogle ? "space-y-5" : "grid gap-5 sm:grid-cols-2"}>
                 <PhoneInput
                   id="celular"
                   label="Celular"
@@ -232,27 +341,31 @@ export function RegistrarseClient() {
                   onChange={setCelular}
                   required
                 />
+                {!viaGoogle ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="correo">Correo electrónico</Label>
+                    <Input
+                      id="correo"
+                      type="email"
+                      placeholder="tu@correo.com"
+                      value={correo}
+                      onChange={(e) => setCorreo(e.target.value)}
+                    />
+                  </div>
+                ) : null}
+              </div>
+              {!viaGoogle ? (
                 <div className="space-y-2">
-                  <Label htmlFor="correo">Correo electrónico</Label>
+                  <Label htmlFor="password">Contraseña</Label>
                   <Input
-                    id="correo"
-                    type="email"
-                    placeholder="tu@correo.com"
-                    value={correo}
-                    onChange={(e) => setCorreo(e.target.value)}
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                   />
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Contraseña</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
+              ) : null}
             </div>
           </div>
         )}
@@ -271,7 +384,7 @@ export function RegistrarseClient() {
               <div className="space-y-2">
                 <Label htmlFor="genero">Género (opcional)</Label>
                 <Select
-                  value={genero}
+                  value={genero || undefined}
                   onValueChange={(v) => setGenero(v ?? "")}
                   items={GENEROS.map((g) => ({
                     value: g.value,
@@ -307,8 +420,20 @@ export function RegistrarseClient() {
             <DepartamentoMunicipioSelect
               municipioId={municipioId}
               onMunicipioChange={setMunicipioId}
+              municipioLabel="Ciudad"
               optional
             />
+
+            <div className="space-y-2">
+              <Label htmlFor="barrio">Barrio (opcional)</Label>
+              <Textarea
+                id="barrio"
+                rows={2}
+                placeholder="Ej: Villa Santana, Boston, Centro…"
+                value={barrio}
+                onChange={(e) => setBarrio(e.target.value)}
+              />
+            </div>
 
             <fieldset className="space-y-3">
               <legend className="text-sm font-medium text-foreground">
@@ -366,6 +491,16 @@ export function RegistrarseClient() {
 
         {step === 2 && (
           <div className="space-y-7">
+            {catalogLoading ? (
+              <p className="text-sm text-muted-foreground">
+                Cargando habilidades…
+              </p>
+            ) : habilidades.length === 0 ? (
+              <p className="text-sm text-destructive">
+                No hay catálogo de habilidades. En la API corre{" "}
+                <code className="text-xs">php artisan local:ensure</code>.
+              </p>
+            ) : null}
             <fieldset className="space-y-3">
               <legend className="text-sm font-medium text-foreground">
                 ¿Qué sabes hacer con las manos?
@@ -374,13 +509,15 @@ export function RegistrarseClient() {
                 Marca todos los oficios en los que puedes echar una mano.
               </p>
               <div className="flex flex-wrap gap-2">
-                {HABILIDADES_MANUALES.map((h) => (
+                {manuales.map((h) => (
                   <Chip
-                    key={h}
-                    active={manuales.includes(h)}
-                    onClick={() => toggle(h, manuales, setManuales)}
+                    key={h.id}
+                    active={habilidadIds.includes(h.id)}
+                    onClick={() =>
+                      toggleId(h.id, habilidadIds, setHabilidadIds)
+                    }
                   >
-                    {h}
+                    {h.nombre}
                   </Chip>
                 ))}
               </div>
@@ -391,13 +528,15 @@ export function RegistrarseClient() {
                 ¿Con qué conocimientos puedes aportar?
               </legend>
               <div className="flex flex-wrap gap-2">
-                {HABILIDADES_CONOCIMIENTO.map((h) => (
+                {conocimiento.map((h) => (
                   <Chip
-                    key={h}
-                    active={conocimiento.includes(h)}
-                    onClick={() => toggle(h, conocimiento, setConocimiento)}
+                    key={h.id}
+                    active={habilidadIds.includes(h.id)}
+                    onClick={() =>
+                      toggleId(h.id, habilidadIds, setHabilidadIds)
+                    }
                   >
-                    {h}
+                    {h.nombre}
                   </Chip>
                 ))}
               </div>
@@ -408,62 +547,19 @@ export function RegistrarseClient() {
                 ¿Cuándo tienes disponibilidad?
               </legend>
               <div className="flex flex-wrap gap-2">
-                {DISPONIBILIDAD.map((d) => (
+                {disponibilidades.map((d) => (
                   <Chip
-                    key={d}
-                    active={disponibilidad.includes(d)}
-                    onClick={() => toggle(d, disponibilidad, setDisponibilidad)}
+                    key={d.id}
+                    active={disponibilidadIds.includes(d.id)}
+                    onClick={() =>
+                      toggleId(d.id, disponibilidadIds, setDisponibilidadIds)
+                    }
                   >
-                    {d}
+                    {d.nombre}
                   </Chip>
                 ))}
               </div>
             </fieldset>
-
-            <div className="space-y-3">
-              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-muted/40 p-4">
-                <input
-                  type="checkbox"
-                  checked={aceptaTerminos}
-                  onChange={(e) => setAceptaTerminos(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
-                />
-                <span className="text-sm leading-relaxed text-muted-foreground">
-                  He leído y acepto las{" "}
-                  <Link
-                    href="/terminos"
-                    target="_blank"
-                    className="font-medium text-primary transition-colors hover:text-primary/80"
-                  >
-                    reglas y términos
-                  </Link>{" "}
-                  de Convites.
-                </span>
-              </label>
-              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-muted/40 p-4">
-                <input
-                  type="checkbox"
-                  checked={aceptaDescargo}
-                  onChange={(e) => setAceptaDescargo(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
-                />
-                <span className="text-sm leading-relaxed text-muted-foreground">
-                  Declaro que los datos que entrego son veraces y de mi
-                  responsabilidad, y acepto el{" "}
-                  <Link
-                    href="/descargo-de-responsabilidad"
-                    target="_blank"
-                    className="font-medium text-primary transition-colors hover:text-primary/80"
-                  >
-                    descargo de responsabilidad
-                  </Link>
-                  . Entiendo que Convites es solo una herramienta de coordinación y
-                  que la plataforma y su desarrollador quedan liberados de toda
-                  responsabilidad por los acuerdos, aportes o datos entregados
-                  entre las partes.
-                </span>
-              </label>
-            </div>
           </div>
         )}
 
@@ -501,19 +597,6 @@ export function RegistrarseClient() {
           )}
         </div>
       </div>
-
-      {step === 0 && (
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          Al registrarte aceptas nuestras{" "}
-          <Link
-            href="/terminos"
-            className="font-medium text-primary transition-colors hover:text-primary/80"
-          >
-            reglas de convivencia
-          </Link>
-          .
-        </p>
-      )}
     </div>
   )
 }

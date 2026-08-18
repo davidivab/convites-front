@@ -10,6 +10,7 @@ import { cancelarAporte, fetchMisAportes } from "@/lib/convites-api"
 import type { ApiAporte } from "@/lib/types"
 import { CalendarClock, HandHeart, Sprout, CheckCircle2, MapPin } from "lucide-react"
 import { VoluntarioTerritorioBanner } from "@/components/perfil/voluntario-territorio-banner"
+import { perfilTabsForRole } from "@/lib/role-tree"
 
 function formatAporteItems(aporte: ApiAporte): string {
   if (!aporte.items?.length) {
@@ -38,7 +39,7 @@ function formatFecha(value: string | null | undefined): string {
 }
 
 export function PanelAportanteClient() {
-  const { user, token, loading: authLoading, hasPermission } = useRequireRoleTree(
+  const { user, token, loading: authLoading } = useRequireRoleTree(
     "/panel/aportante",
     "aportante",
   )
@@ -120,16 +121,7 @@ export function PanelAportanteClient() {
     .filter(Boolean)
     .sort()[0]
 
-  const tabs = [
-    { href: "/panel/aportante", label: "Aportante", active: true },
-    { href: "/panel/creador", label: "Organizador" },
-    ...(hasPermission("profesional_perfil.view_own")
-      ? [{ href: "/panel/profesional", label: "Profesional" }]
-      : []),
-    ...(hasPermission("iniciativas.moderate")
-      ? [{ href: "/moderacion", label: "Moderación" }]
-      : []),
-  ]
+  const tabs = perfilTabsForRole(user, "/panel/aportante")
 
   if (authLoading || (!token && loading)) {
     return (

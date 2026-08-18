@@ -21,11 +21,37 @@ type AuthState = {
   token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  /** P42: canjea código de Google (query) por sesión httpOnly. */
+  completeGoogleLogin: (code: string) => Promise<AuthUser>;
+  /** P47: completa registro con código pendiente de Google. */
+  completeGoogleRegistro: (payload: {
+    code: string;
+    celular?: string;
+    municipio_id?: number;
+    barrio?: string;
+    genero?: string;
+    edad?: number;
+    aptitud_fisica?: string;
+    notas_salud?: string;
+    habilidad_ids?: number[];
+    disponibilidad_ids?: number[];
+    acepta_terminos: boolean;
+    acepta_descargo: boolean;
+  }) => Promise<AuthUser>;
   register: (payload: {
     name: string;
     email: string;
     password: string;
     password_confirmation: string;
+    celular?: string;
+    municipio_id?: number;
+    barrio?: string;
+    genero?: string;
+    edad?: number;
+    aptitud_fisica?: string;
+    notas_salud?: string;
+    habilidad_ids?: number[];
+    disponibilidad_ids?: number[];
   }) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -88,12 +114,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(SESSION_FLAG);
   }, []);
 
+  const completeGoogleLogin = useCallback(async (code: string) => {
+    const res = await bffJson<{ user: AuthUser }>("/api/auth/google/exchange", {
+      method: "POST",
+      body: JSON.stringify({ code }),
+    });
+    setUser(res.user);
+    setToken(SESSION_FLAG);
+    return res.user;
+  }, []);
+
+  const completeGoogleRegistro = useCallback(
+    async (payload: {
+      code: string;
+      celular?: string;
+      municipio_id?: number;
+      barrio?: string;
+      genero?: string;
+      edad?: number;
+      aptitud_fisica?: string;
+      notas_salud?: string;
+      habilidad_ids?: number[];
+      disponibilidad_ids?: number[];
+      acepta_terminos: boolean;
+      acepta_descargo: boolean;
+    }) => {
+      const res = await bffJson<{ user: AuthUser }>(
+        "/api/auth/google/completar-registro",
+        { method: "POST", body: JSON.stringify(payload) },
+      );
+      setUser(res.user);
+      setToken(SESSION_FLAG);
+      return res.user;
+    },
+    [],
+  );
+
   const register = useCallback(
     async (payload: {
       name: string;
       email: string;
       password: string;
       password_confirmation: string;
+      celular?: string;
+      municipio_id?: number;
+      barrio?: string;
+      genero?: string;
+      edad?: number;
+      aptitud_fisica?: string;
+      notas_salud?: string;
+      habilidad_ids?: number[];
+      disponibilidad_ids?: number[];
     }) => {
       const res = await bffJson<{ user: AuthUser }>("/api/auth/register", {
         method: "POST",
@@ -126,12 +197,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       token,
       loading,
       login,
+      completeGoogleLogin,
+      completeGoogleRegistro,
       register,
       logout,
       refresh,
       hasPermission,
     }),
-    [user, token, loading, login, register, logout, refresh, hasPermission],
+    [
+      user,
+      token,
+      loading,
+      login,
+      completeGoogleLogin,
+      completeGoogleRegistro,
+      register,
+      logout,
+      refresh,
+      hasPermission,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

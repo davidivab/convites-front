@@ -3,28 +3,32 @@
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { DashboardShell, StatTile } from "@/components/layout/dashboard-shell"
+import { AportanteRow } from "@/components/aportes/aportante-row"
 import { Button } from "@/components/ui/button"
 import { ItemProgressRow } from "@/components/iniciativa/item-progress-row"
 import { StatusBadge } from "@/components/iniciativa/status-badges"
 import { useRequireRoleTree } from "@/hooks/use-require-role-tree"
 import { ApiError } from "@/lib/api"
 import {
+  cerrarIniciativa,
   enviarRevision,
   fetchAportantes,
   fetchMisIniciativas,
+  eliminarEvidenciaAporte,
   marcarAporteRecepcion,
 } from "@/lib/convites-api"
 import { progresoTotal, type Iniciativa } from "@/lib/data"
 import type { ApiAporte } from "@/lib/types"
 import { VoluntarioTerritorioBanner } from "@/components/perfil/voluntario-territorio-banner"
+import { perfilTabsForRole } from "@/lib/role-tree"
 import {
-  Check,
   Megaphone,
   Plus,
   ArrowUpRight,
   Users,
-  Camera,
   MapPin,
+  Share2,
+  Check,
 } from "lucide-react"
 
 export function PanelCreadorClient() {
@@ -35,7 +39,9 @@ export function PanelCreadorClient() {
   const [mias, setMias] = useState<Iniciativa[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [copiedSlug, setCopiedSlug] = useState<string | null>(null)
   const [sendingId, setSendingId] = useState<string | null>(null)
+  const [closingId, setClosingId] = useState<string | null>(null)
   const [aportantesByIni, setAportantesByIni] = useState<Record<string, ApiAporte[]>>({})
   const [loadingAportantes, setLoadingAportantes] = useState<string | null>(null)
   const [recepcionId, setRecepcionId] = useState<number | null>(null)
@@ -82,6 +88,47 @@ export function PanelCreadorClient() {
       )
     } finally {
       setSendingId(null)
+    }
+  }
+
+  async function onCerrar(ini: Iniciativa) {
+    if (!token || closingId) return
+    const ok = window.confirm(
+      `¿Detener «${ini.titulo}»? Pasará a cerrado y no recibirá más aportes.`,
+    )
+    if (!ok) return
+    setClosingId(ini.id)
+    setError(null)
+    try {
+      const updated = await cerrarIniciativa(token, ini.id)
+      setMias((prev) =>
+        prev.map((i) =>
+          i.id === ini.id
+            ? { ...i, estado: "cerrada" as const, ...updated }
+            : i,
+        ),
+      )
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.body.message || "No pudimos cerrar el convite."
+          : "No pudimos cerrar el convite.",
+      )
+    } finally {
+      setClosingId(null)
+    }
+  }
+
+  async function onCompartir(ini: Iniciativa) {
+    const url = `${window.location.origin}/iniciativa/${ini.slug}`
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopiedSlug(ini.slug)
+      window.setTimeout(() => {
+        setCopiedSlug((prev) => (prev === ini.slug ? null : prev))
+      }, 2500)
+    } catch {
+      setError("No pudimos copiar el enlace. Cópialo manualmente desde Ver convite.")
     }
   }
 
@@ -134,6 +181,31 @@ export function PanelCreadorClient() {
     }
   }
 
+  async function onEliminarEvidencia(ini: Iniciativa, aporte: ApiAporte) {
+    if (!token || recepcionId) return
+    const ok = window.confirm("¿Quitar la evidencia de este aporte?")
+    if (!ok) return
+    setRecepcionId(aporte.id)
+    setError(null)
+    try {
+      const updated = await eliminarEvidenciaAporte(token, aporte.id)
+      setAportantesByIni((prev) => ({
+        ...prev,
+        [ini.id]: (prev[ini.id] ?? []).map((a) =>
+          a.id === aporte.id ? updated : a,
+        ),
+      }))
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.body.message || "No pudimos quitar la evidencia."
+          : "No pudimos quitar la evidencia.",
+      )
+    } finally {
+      setRecepcionId(null)
+    }
+  }
+
   const abiertos = useMemo(
     () =>
       mias.filter((i) =>
@@ -158,16 +230,7 @@ export function PanelCreadorClient() {
     [mias],
   )
 
-  const tabs = [
-    { href: "/panel/aportante", label: "Aportante" },
-    { href: "/panel/creador", label: "Organizador", active: true },
-    ...(hasPermission("profesional_perfil.view_own")
-      ? [{ href: "/panel/profesional", label: "Profesional" }]
-      : []),
-    ...(hasPermission("iniciativas.moderate")
-      ? [{ href: "/moderacion", label: "Moderación" }]
-      : []),
-  ]
+  const tabs = perfilTabsForRole(user, "/panel/creador")
 
   if (authLoading || (!token && loading)) {
     return (
@@ -221,6 +284,16 @@ export function PanelCreadorClient() {
         <p className="mb-4 text-sm text-destructive">{error}</p>
       ) : null}
 
+      {copiedSlug ? (
+        <div
+          role="status"
+          className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 shadow-lg"
+        >
+          <Check className="h-4 w-4 shrink-0" />
+          Enlace copiado al portapapeles
+        </div>
+      ) : null}
+
       {loading ? (
         <p className="text-sm text-muted-foreground">Cargando…</p>
       ) : mias.length === 0 ? (
@@ -267,6 +340,38 @@ export function PanelCreadorClient() {
                     ) : null}
                   </div>
                   <div className="flex shrink-0 flex-wrap gap-2">
+                    {ini.estado === "borrador" ? (
+                      <Button
+                        size="sm"
+                        render={
+                          <Link
+                            href={`/crear?slug=${encodeURIComponent(ini.slug)}&paso=${ini.wizardPaso ?? 1}`}
+                          />
+                        }
+                      >
+                        Continuar
+                      </Button>
+                    ) : null}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      render={
+                        <Link href={`/panel/creador/${ini.slug}/editar`} />
+                      }
+                    >
+                      Editar
+                    </Button>
+                    {(ini.estado === "publicada" || ini.estado === "en-curso") && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={closingId === ini.id}
+                        onClick={() => void onCerrar(ini)}
+                      >
+                        {closingId === ini.id ? "Cerrando…" : "Detener"}
+                      </Button>
+                    )}
                     {(ini.estado === "borrador" || ini.estado === "rechazada") && (
                       <Button
                         type="button"
@@ -293,12 +398,36 @@ export function PanelCreadorClient() {
                             : "Ver aportantes"}
                       </Button>
                     ) : null}
-                    <Link
-                      href={`/iniciativa/${ini.slug}`}
-                      className="inline-flex items-center gap-1 text-sm font-medium text-primary transition-colors hover:text-primary/80"
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      render={
+                        <a
+                          href={`/iniciativa/${ini.slug}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        />
+                      }
                     >
-                      Ver público <ArrowUpRight className="h-4 w-4" />
-                    </Link>
+                      Ver convite <ArrowUpRight className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={() => void onCompartir(ini)}
+                    >
+                      {copiedSlug === ini.slug ? (
+                        <>
+                          <Check className="h-4 w-4 text-emerald-600" /> Copiado
+                        </>
+                      ) : (
+                        <>
+                          <Share2 className="h-4 w-4" /> Compartir
+                        </>
+                      )}
+                    </Button>
                   </div>
                 </div>
 
@@ -362,6 +491,9 @@ export function PanelCreadorClient() {
                             onNoRecibido={() =>
                               void onMarcarRecepcion(ini, aporte, false)
                             }
+                            onEliminarEvidencia={() =>
+                              void onEliminarEvidencia(ini, aporte)
+                            }
                           />
                         ))}
                       </ul>
@@ -374,111 +506,5 @@ export function PanelCreadorClient() {
         </div>
       )}
     </DashboardShell>
-  )
-}
-
-function AportanteRow({
-  aporte,
-  busy,
-  onRecibido,
-  onNoRecibido,
-}: {
-  aporte: ApiAporte
-  busy: boolean
-  onRecibido: (file?: File | null) => void
-  onNoRecibido: () => void
-}) {
-  const recibido = aporte.estado === "cumplido"
-  const itemsLabel = aporte.items
-    .map((i) => `${i.cantidad} ${i.unidad ?? ""} ${i.nombre ?? ""}`.trim())
-    .join(", ")
-
-  return (
-    <li className="rounded-lg border border-border bg-background/60 p-3">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="font-medium text-foreground">
-            {aporte.aportante?.name ?? "Aportante"}
-            {aporte.anonimo ? (
-              <span className="ml-2 text-xs font-normal text-muted-foreground">
-                (anónimo)
-              </span>
-            ) : null}
-          </p>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            {itemsLabel || (aporte.asiste_al_convite ? "Solo asistencia" : "Sin ítems")}
-            {aporte.asiste_al_convite && itemsLabel ? " · Asiste al convite" : ""}
-          </p>
-          {aporte.punto_acopio ? (
-            <p className="mt-1 flex items-start gap-1 text-xs text-muted-foreground">
-              <MapPin className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
-              Entrega en: {aporte.punto_acopio.nombre}
-              {aporte.punto_acopio.municipio?.nombre
-                ? ` (${aporte.punto_acopio.municipio.nombre})`
-                : ""}
-            </p>
-          ) : null}
-          <p className="mt-1 text-xs text-muted-foreground">
-            Estado: {aporte.estado_label ?? aporte.estado}
-            {aporte.evidencia?.url ? (
-              <>
-                {" · "}
-                <a
-                  href={aporte.evidencia.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-primary underline"
-                >
-                  Ver evidencia
-                </a>
-              </>
-            ) : null}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {recibido ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={busy}
-              onClick={onNoRecibido}
-            >
-              Marcar no recibido
-            </Button>
-          ) : (
-            <>
-              <label className="inline-flex cursor-pointer items-center gap-1.5">
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="sr-only"
-                  disabled={busy}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0] ?? null
-                    onRecibido(file)
-                    e.target.value = ""
-                  }}
-                />
-                <span className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-xs font-medium text-foreground hover:bg-muted">
-                  <Camera className="h-3.5 w-3.5" />
-                  Con foto
-                </span>
-              </label>
-              <Button
-                type="button"
-                size="sm"
-                disabled={busy}
-                onClick={() => onRecibido(null)}
-                className="gap-1"
-              >
-                <Check className="h-3.5 w-3.5" />
-                Recibido
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
-    </li>
   )
 }

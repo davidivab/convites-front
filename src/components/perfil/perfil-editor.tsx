@@ -12,6 +12,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import { DepartamentoMunicipioSelect } from "@/components/ui/departamento-municipio-select"
+import { PhoneInput, isPhoneValid } from "@/components/ui/phone-input"
+import { AceptacionesLegales } from "@/components/auth/aceptaciones-legales"
 import { APTITUD_FISICA, GENEROS } from "@/lib/data"
 import { ApiError } from "@/lib/api"
 import {
@@ -23,7 +27,6 @@ import type {
   ApiDisponibilidad,
   ApiHabilidad,
   ApiProfile,
-  ApiZona,
   AuthUser,
 } from "@/lib/types"
 import { Check } from "lucide-react"
@@ -57,9 +60,13 @@ function Chip({
 export function PerfilEditor({
   user,
   token,
+  onboarding = false,
+  onSaved,
 }: {
   user: AuthUser
   token: string
+  onboarding?: boolean
+  onSaved?: () => void | Promise<void>
 }) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -68,15 +75,18 @@ export function PerfilEditor({
 
   const [name, setName] = useState(user.name)
   const [celular, setCelular] = useState("")
-  const [zonaId, setZonaId] = useState("")
+  const [departamentoId, setDepartamentoId] = useState("")
+  const [municipioId, setMunicipioId] = useState("")
+  const [barrio, setBarrio] = useState("")
   const [genero, setGenero] = useState("")
   const [edad, setEdad] = useState("")
   const [aptitud, setAptitud] = useState("media")
   const [notasSalud, setNotasSalud] = useState("")
   const [habilidadIds, setHabilidadIds] = useState<number[]>([])
   const [disponibilidadIds, setDisponibilidadIds] = useState<number[]>([])
+  const [aceptaTerminos, setAceptaTerminos] = useState(false)
+  const [aceptaDescargo, setAceptaDescargo] = useState(false)
 
-  const [zonas, setZonas] = useState<ApiZona[]>([])
   const [habilidades, setHabilidades] = useState<ApiHabilidad[]>([])
   const [disponibilidades, setDisponibilidades] = useState<ApiDisponibilidad[]>([])
 
@@ -91,7 +101,6 @@ export function PerfilEditor({
           fetchProfile(token),
         ])
         if (cancelled) return
-        setZonas(catalogos.zonas)
         setHabilidades(catalogos.habilidades)
         setDisponibilidades(catalogos.disponibilidades)
         applyProfile(profile)
@@ -116,7 +125,13 @@ export function PerfilEditor({
   function applyProfile(profile: ApiProfile) {
     setName(profile.name || user.name)
     setCelular(profile.celular || "")
-    setZonaId(profile.zona_id ? String(profile.zona_id) : "")
+    setMunicipioId(profile.municipio_id ? String(profile.municipio_id) : "")
+    setDepartamentoId(
+      profile.municipio?.departamento?.id
+        ? String(profile.municipio.departamento.id)
+        : "",
+    )
+    setBarrio(profile.barrio || "")
     setGenero(profile.genero || "")
     setEdad(profile.edad != null ? String(profile.edad) : "")
     setAptitud(profile.aptitud_fisica || "media")
@@ -144,6 +159,14 @@ export function PerfilEditor({
   }
 
   async function onSave() {
+    if (onboarding && (!aceptaTerminos || !aceptaDescargo)) {
+      setError("Debes aceptar los términos y el descargo para terminar tu registro.")
+      return
+    }
+    if (celular.trim() && !isPhoneValid(celular, false)) {
+      setError("Revisa el celular: el indicativo y el número no son válidos.")
+      return
+    }
     setSaving(true)
     setError(null)
     setSaved(false)
@@ -151,16 +174,21 @@ export function PerfilEditor({
       const profile = await updateProfile(token, {
         name: name.trim(),
         celular: celular.trim() || null,
-        zona_id: zonaId ? Number(zonaId) : null,
+        municipio_id: municipioId ? Number(municipioId) : null,
+        barrio: barrio.trim() || null,
         genero: genero || null,
         edad: edad ? Number(edad) : null,
         aptitud_fisica: aptitud || null,
         notas_salud: notasSalud.trim() || null,
         habilidad_ids: habilidadIds,
         disponibilidad_ids: disponibilidadIds,
+        ...(onboarding
+          ? { acepta_terminos: true, acepta_descargo: true }
+          : {}),
       })
       applyProfile(profile)
       setSaved(true)
+      await onSaved?.()
     } catch (err) {
       setError(
         err instanceof ApiError
@@ -203,41 +231,48 @@ export function PerfilEditor({
             <Label htmlFor="correo">Correo</Label>
             <Input id="correo" type="email" value={user.email} disabled />
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="tel">Celular</Label>
-            <Input
+          <div className="grid gap-2 sm:col-span-2">
+            <PhoneInput
               id="tel"
+              label="Celular"
               value={celular}
-              onChange={(e) => {
+              onChange={(v) => {
                 setSaved(false)
-                setCelular(e.target.value)
+                setError(null)
+                setCelular(v)
               }}
+              optional
             />
           </div>
+        </div>
+
+        <div className="mt-5 space-y-5">
+          <DepartamentoMunicipioSelect
+            departamentoId={departamentoId}
+            onDepartamentoChange={(id) => {
+              setSaved(false)
+              setDepartamentoId(id)
+            }}
+            municipioId={municipioId}
+            onMunicipioChange={(id) => {
+              setSaved(false)
+              setMunicipioId(id)
+            }}
+            municipioLabel="Ciudad"
+            optional
+          />
           <div className="grid gap-2">
-            <Label htmlFor="zona">Zona</Label>
-            <Select
-              value={zonaId}
-              onValueChange={(v) => {
+            <Label htmlFor="barrio">Barrio</Label>
+            <Textarea
+              id="barrio"
+              rows={2}
+              placeholder="Ej: Villa Santana, Boston, Centro…"
+              value={barrio}
+              onChange={(e) => {
                 setSaved(false)
-                setZonaId(v ?? "")
+                setBarrio(e.target.value)
               }}
-              items={zonas.map((z) => ({
-                value: String(z.id),
-                label: z.nombre,
-              }))}
-            >
-              <SelectTrigger id="zona">
-                <SelectValue placeholder="Elige tu zona" />
-              </SelectTrigger>
-              <SelectContent>
-                {zonas.map((z) => (
-                  <SelectItem key={z.id} value={String(z.id)}>
-                    {z.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
           </div>
         </div>
       </section>
@@ -251,7 +286,7 @@ export function PerfilEditor({
           <div className="grid gap-2">
             <Label htmlFor="genero">Género</Label>
             <Select
-              value={genero}
+              value={genero || undefined}
               onValueChange={(v) => {
                 setSaved(false)
                 setGenero(v ?? "")
@@ -402,6 +437,24 @@ export function PerfilEditor({
         </fieldset>
       </section>
 
+      {onboarding ? (
+        <section className="mt-6 rounded-xl border border-border bg-card p-6">
+          <h2 className="font-serif text-xl text-foreground">Aceptaciones</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Necesarias para cerrar el registro que quedó a medias.
+          </p>
+          <div className="mt-4">
+            <AceptacionesLegales
+              aceptaTerminos={aceptaTerminos}
+              aceptaDescargo={aceptaDescargo}
+              onTerminosChange={setAceptaTerminos}
+              onDescargoChange={setAceptaDescargo}
+              mostrarDescargo
+            />
+          </div>
+        </section>
+      ) : null}
+
       {error ? (
         <p className="mt-4 text-sm text-destructive">{error}</p>
       ) : null}
@@ -410,7 +463,9 @@ export function PerfilEditor({
         <Button
           type="button"
           onClick={() => void onSave()}
-          disabled={saving}
+          disabled={
+            saving || (onboarding && (!aceptaTerminos || !aceptaDescargo))
+          }
           className="gap-2"
         >
           {saved ? (

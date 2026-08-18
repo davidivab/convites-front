@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { isValidPhoneNumber } from "libphonenumber-js"
+import { ITEM_UNIDAD_VALUES } from "@/lib/item-unidades"
 
 export const crearStep1Schema = z.object({
   title: z.string().trim().min(5, "Escribe un título más descriptivo"),
@@ -20,7 +21,9 @@ export const crearStep2Schema = z.object({
 export const crearItemSchema = z.object({
   id: z.string(),
   name: z.string().trim().min(1, "Nombre del ítem"),
-  unit: z.string().trim().min(1, "Unidad"),
+  unit: z.enum(ITEM_UNIDAD_VALUES as unknown as [string, ...string[]], {
+    message: "Elige el tipo de medida",
+  }),
   quantity: z
     .string()
     .trim()
@@ -31,6 +34,9 @@ export const crearStep3Schema = z.object({
   items: z.array(crearItemSchema).min(1, "Agrega al menos un ítem"),
 })
 
+/** Multimedia es opcional; si hay enlaces a medias, se validan al continuar. */
+export const crearMultimediaSchema = z.object({})
+
 export const crearStep4Schema = z.object({
   responsable: z.string().trim().min(2, "Nombre de quien responde"),
   respaldo: z.string().trim().min(2, "Quién respalda"),
@@ -38,6 +44,9 @@ export const crearStep4Schema = z.object({
     .string()
     .trim()
     .refine((v) => isValidPhoneNumber(v), "Teléfono de contacto inválido"),
+})
+
+export const crearStep5Schema = z.object({
   aceptaTerminos: z.boolean().refine((v) => v, "Debes aceptar los términos"),
   aceptaDescargo: z.boolean().refine((v) => v, "Debes aceptar el descargo"),
 })
@@ -46,6 +55,7 @@ export const crearFormSchema = crearStep1Schema
   .and(crearStep2Schema)
   .and(crearStep3Schema)
   .and(crearStep4Schema)
+  .and(crearStep5Schema)
 
 export type CrearFormValues = z.infer<typeof crearFormSchema>
 
@@ -53,6 +63,7 @@ export const CREAR_STEP_SCHEMAS = [
   crearStep1Schema,
   crearStep2Schema,
   crearStep3Schema,
+  crearMultimediaSchema,
   crearStep4Schema,
   crearFormSchema,
 ] as const

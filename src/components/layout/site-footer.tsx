@@ -5,8 +5,8 @@ const LINKS = [
   {
     titulo: 'Plataforma',
     items: [
-      { href: '/explorar', label: 'Explorar iniciativas' },
-      { href: '/crear', label: 'Crear una iniciativa' },
+      { href: '/explorar', label: 'Explorar convites' },
+      { href: '/crear', label: 'Crear un convite' },
       { href: '/panel/aportante', label: 'Mi panel' },
     ],
   },
@@ -27,8 +27,8 @@ export function SiteFooter() {
         <div className="max-w-xs">
           <Wordmark />
           <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-            Plataforma ciudadana de convites comunitarios en las zonas afectadas de Risaralda. No
-            somos fundación ni empresa: somos vecinos organizándonos.
+            Plataforma ciudadana de convites en las zonas afectadas de Risaralda.
+            No somos fundación ni empresa.
           </p>
         </div>
 

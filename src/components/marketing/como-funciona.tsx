@@ -1,23 +1,24 @@
+import Image from 'next/image'
 import { ClipboardList, HandHeart, Hammer } from 'lucide-react'
 
 const PASOS = [
   {
     icon: ClipboardList,
-    titulo: 'Se abre una iniciativa',
+    titulo: 'Se abre un convite',
     texto:
-      'Un vecino o una junta cuenta qué se necesita y arma la lista de insumos. Un moderador la revisa antes de publicarla.',
+      'Un vecino cuenta qué se necesita y arma la lista. Un moderador la revisa antes de publicarla.',
   },
   {
     icon: HandHeart,
     titulo: 'Cada quien suma lo que puede',
     texto:
-      'Tú eliges qué vas a llevar: tejas, cemento, comida, herramientas o tus manos. Todo suma y se ve reflejado al instante.',
+      'Elegís qué llevar: tejas, cemento, comida, herramientas o tus manos. Todo se refleja al instante.',
   },
   {
     icon: Hammer,
     titulo: 'Nos juntamos en el convite',
     texto:
-      'El día acordado nos encontramos en el lugar, llevamos lo prometido y construimos o reparamos entre todos.',
+      'El día acordado nos encontramos, llevamos lo prometido y construimos o reparamos entre todos.',
   },
 ]
 
@@ -26,15 +27,25 @@ export function ComoFunciona() {
     <section className="mx-auto w-full max-w-6xl px-4 py-16 md:py-20">
       <div className="max-w-2xl">
         <span className="text-sm font-semibold uppercase tracking-wide text-primary">
-          Cómo funciona un convite
+          Cómo funciona
         </span>
         <h2 className="mt-2 font-serif text-3xl font-semibold text-balance text-foreground md:text-4xl">
-          Un convite es la gente reunida para construir junta
+          Uno trae tejas, otro cemento, otro las manos
         </h2>
         <p className="mt-3 text-base leading-relaxed text-muted-foreground">
-          No es una colecta de plata. Es una lista de lo que falta y un montón de manos dispuestas a
-          poner el hombro.
+          No es una colecta de plata. Es una lista de lo que falta y vecinos
+          dispuestos a poner el hombro.
         </p>
+      </div>
+
+      <div className="relative mt-8 aspect-[16/9] w-full overflow-hidden rounded-2xl">
+        <Image
+          src="/images/como-funciona-convite.png"
+          alt="Vecinos llevando tejas, cemento y herramientas a un convite comunitario"
+          fill
+          sizes="(max-width: 1152px) 100vw, 1152px"
+          className="object-cover"
+        />
       </div>
 
       <ol className="mt-10 grid gap-6 md:grid-cols-3">

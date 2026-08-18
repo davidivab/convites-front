@@ -8,6 +8,7 @@ import {
   type Profesional,
 } from "@/lib/data"
 import { Button } from "@/components/ui/button"
+import { PageIntroSection } from "@/components/layout/page-intro-section"
 import {
   HeartPulse,
   Scale,
@@ -53,40 +54,40 @@ export function ProfesionalesClient({
 
   return (
     <>
-      <section className="border-b border-border bg-secondary/40">
-        <div className="mx-auto w-full max-w-6xl px-4 py-12 md:py-16">
-          <p className="text-sm font-medium text-primary">Voluntariado especializado</p>
-          <h1 className="mt-2 max-w-2xl text-balance font-serif text-4xl leading-tight text-foreground md:text-5xl">
-            Manos profesionales
-          </h1>
-          <p className="mt-4 max-w-2xl text-pretty leading-relaxed text-muted-foreground">
-            Profesionales de la región que donan su conocimiento sin costo: acompañamiento
-            psicológico, asesoría legal, evaluación de estructuras y planes de nutrición para
-            quienes lo necesitan.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Button size="lg" render={<Link href="/registro-profesional" />}>
-              <HandHeart className="size-4" />
-              Registrarme como profesional
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              render={<Link href="/ingresar?next=/manos-profesionales" />}
-            >
-              Ya tengo cuenta
-            </Button>
-          </div>
-          {process.env.NODE_ENV !== "production" ? (
-            <p className="mt-4 max-w-xl text-xs text-muted-foreground">
-              Demo:{" "}
-              <code className="rounded bg-muted px-1">aportante1@convites.test</code>{" "}
-              / password — perfil profesional vinculado (Laura Cardona). Panel
-              propio del rol llega con API P29.
-            </p>
-          ) : null}
+      <PageIntroSection
+        title="Manos profesionales"
+        eyebrow="Voluntariado especializado"
+        className="bg-secondary/40"
+        description={
+          <>
+            Profesionales de la región que donan su conocimiento sin costo:
+            acompañamiento psicológico, asesoría legal, evaluación de
+            estructuras y planes de nutrición para quienes lo necesitan.
+          </>
+        }
+      >
+        <div className="flex flex-wrap gap-3">
+          <Button size="lg" render={<Link href="/panel/roles/profesional/registro" />}>
+            <HandHeart className="size-4" />
+            Registrarme como profesional
+          </Button>
+          <Button
+            size="lg"
+            variant="outline"
+            render={<Link href="/ingresar?next=/manos-profesionales" />}
+          >
+            Ya tengo cuenta
+          </Button>
         </div>
-      </section>
+        {process.env.NODE_ENV !== "production" ? (
+          <p className="mt-4 max-w-xl text-xs text-muted-foreground">
+            Demo:{" "}
+            <code className="rounded bg-muted px-1">aportante1@convites.test</code>{" "}
+            / password — perfil profesional vinculado (Laura Cardona). Panel
+            propio del rol llega con API P29.
+          </p>
+        ) : null}
+      </PageIntroSection>
 
       <section className="mx-auto w-full max-w-6xl px-4 py-8">
         <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filtrar por área">
@@ -121,7 +122,7 @@ export function ProfesionalesClient({
               </p>
               <Button
                 className="mt-5"
-                render={<Link href="/registro-profesional" />}
+                render={<Link href="/panel/roles/profesional/registro" />}
               >
                 Registrarme como profesional
               </Button>

@@ -115,6 +115,52 @@ export default async function IniciativaPage({
                 </div>
               </section>
 
+              {(ini.galeria?.length ?? 0) > 0 ? (
+                <section className="mt-8">
+                  <h2 className="font-serif text-2xl font-semibold text-foreground">
+                    Galería
+                  </h2>
+                  <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    {ini.galeria!.map((g) => (
+                      <li
+                        key={g.id}
+                        className="relative aspect-square overflow-hidden rounded-xl bg-muted"
+                      >
+                        <Image
+                          src={g.url}
+                          alt=""
+                          fill
+                          sizes="(max-width: 768px) 50vw, 220px"
+                          className="object-cover"
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+
+              {(ini.enlaces?.length ?? 0) > 0 ? (
+                <section className="mt-8">
+                  <h2 className="font-serif text-2xl font-semibold text-foreground">
+                    Enlaces
+                  </h2>
+                  <ul className="mt-3 space-y-2">
+                    {ini.enlaces!.map((e) => (
+                      <li key={e.id}>
+                        <a
+                          href={e.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm font-medium text-primary underline-offset-2 hover:underline"
+                        >
+                          {e.titulo}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+
               <section className="mt-8 grid gap-3 rounded-2xl border border-border bg-sidebar/60 p-5 sm:grid-cols-2">
                 <div className="flex items-start gap-3">
                   <span className="flex size-9 items-center justify-center rounded-lg bg-card text-primary">

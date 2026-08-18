@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { DashboardShell, StatTile } from "@/components/layout/dashboard-shell"
 import { PerfilEditor } from "@/components/perfil/perfil-editor"
 import { useRequireRoleTree } from "@/hooks/use-require-role-tree"
 import { fetchMisAportes } from "@/lib/convites-api"
+import { perfilTabsForRole } from "@/lib/role-tree"
 import type { ApiAporte } from "@/lib/types"
 import { HandHeart, CalendarCheck, MapPin, Award } from "lucide-react"
 
@@ -32,10 +34,14 @@ function formatAporte(aporte: ApiAporte): string {
 }
 
 export function PerfilClient() {
-  const { user, token, loading: authLoading, hasPermission } = useRequireRoleTree(
-    "/perfil",
+  const searchParams = useSearchParams()
+  const onboarding = searchParams.get("onboarding") === "1"
+  const { user, token, loading: authLoading, refresh } = useRequireRoleTree("/perfil", [
+    "admin",
+    "moderador",
     "aportante",
-  )
+    "profesional",
+  ])
   const [aportes, setAportes] = useState<ApiAporte[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -82,14 +88,7 @@ export function PerfilClient() {
     user?.email?.charAt(0)?.toUpperCase() ||
     "?"
 
-  const tabs = [
-    { href: "/panel/aportante", label: "Aportante" },
-    { href: "/panel/creador", label: "Organizador" },
-    { href: "/perfil", label: "Perfil", active: true },
-    ...(hasPermission("iniciativas.moderate")
-      ? [{ href: "/moderacion", label: "Moderación" }]
-      : []),
-  ]
+  const tabs = perfilTabsForRole(user, "/perfil")
 
   if (authLoading || (!token && loading)) {
     return (
@@ -107,9 +106,24 @@ export function PerfilClient() {
       subtitle="Tus datos y el rastro de todo lo que has aportado a la comunidad."
       tabs={tabs}
     >
+      {onboarding || user.needs_onboarding ? (
+        <div className="mb-6 rounded-xl border border-primary/30 bg-primary/5 p-4 text-sm leading-relaxed text-foreground">
+          <p className="font-medium">Termina tu registro</p>
+          <p className="mt-1 text-muted-foreground">
+            Tu cuenta ya está activa. Completa ubicación, datos opcionales y
+            acepta los términos para seguir con tranquilidad.
+          </p>
+        </div>
+      ) : null}
+
       <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
         <div className="order-2 lg:order-1">
-          <PerfilEditor user={user} token={token} />
+          <PerfilEditor
+            user={user}
+            token={token}
+            onboarding={onboarding || Boolean(user.needs_onboarding)}
+            onSaved={refresh}
+          />
 
           <section className="mt-6 rounded-xl border border-border bg-card p-6">
             <h2 className="font-serif text-xl text-foreground">

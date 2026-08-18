@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useRef, useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Button } from "@/components/ui/button"
@@ -20,18 +20,27 @@ import { useRequireAuth } from "@/hooks/use-require-auth"
 import { ExternalMoneyCallout } from "@/components/iniciativa/external-money-callout"
 import { DepartamentoMunicipioSelect } from "@/components/ui/departamento-municipio-select"
 import { PhoneInput, isPhoneValid } from "@/components/ui/phone-input"
+import { HorarioSemanaGrid } from "@/components/ui/horario-semana-grid"
 import { ApiError } from "@/lib/api"
 import {
   createIniciativa,
+  deleteIniciativaGaleria,
   enviarRevision,
   fetchCatalogos,
+  fetchIniciativaApi,
+  updateIniciativa,
+  uploadIniciativaGaleria,
+  uploadIniciativaPortada,
 } from "@/lib/convites-api"
-import type { ApiCategoria } from "@/lib/types"
+import { isImageFile, resizeImageFile } from "@/lib/image-resize"
+import { ITEM_UNIDAD_OPTIONS, ITEM_UNIDAD_VALUES } from "@/lib/item-unidades"
+import type { ApiCategoria, ApiIniciativa } from "@/lib/types"
 import {
   CREAR_STEP_SCHEMAS,
   crearFormSchema,
   type CrearFormValues,
 } from "@/lib/crear-schema"
+import { PortadaCrop } from "@/components/iniciativa/portada-crop"
 import {
   Check,
   Plus,
@@ -39,6 +48,8 @@ import {
   ArrowLeft,
   ArrowRight,
   ShieldCheck,
+  Link2,
+  ImagePlus,
 } from "lucide-react"
 import dynamic from "next/dynamic"
 import type { MapLocation } from "@/components/map/location-picker"
@@ -62,10 +73,33 @@ type NeededItem = {
   quantity: string
 }
 
+type PuntoDraft = {
+  id: string
+  departamentoId: string
+  municipioId: string
+  municipioNombre: string
+  nombre: string
+  direccion: string
+  horario: string
+  contacto: string
+}
+
+type EnlaceDraft = {
+  id: string
+  titulo: string
+  url: string
+}
+
+type GaleriaDraft = {
+  id: number
+  url: string
+}
+
 const steps = [
   "Sobre el convite",
   "Ubicación y fechas",
   "Qué se necesita",
+  "Multimedia",
   "Verificación",
   "Revisar y publicar",
 ]
@@ -76,12 +110,50 @@ const URGENCIAS = [
   { value: "baja", label: "Sin prisa" },
 ] as const
 
+function clampPaso(raw: string | null): number {
+  const n = Number(raw)
+  if (!Number.isFinite(n)) return 1
+  return Math.min(6, Math.max(1, Math.floor(n)))
+}
+
+function historiaFromApi(historia: string[] | null | undefined, resumen: string): string {
+  const parts = (historia ?? []).map((p) => p.trim()).filter(Boolean)
+  if (parts.length === 0) return ""
+  if (parts.length === 1 && parts[0] === resumen.trim()) return ""
+  return parts.join("\n\n")
+}
+
 export function CrearClient() {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-3xl py-16 text-center text-sm text-muted-foreground">
+          Cargando…
+        </div>
+      }
+    >
+      <CrearClientInner />
+    </Suspense>
+  )
+}
+
+function CrearClientInner() {
   const { token, loading: authLoading } = useRequireAuth("/crear")
   const router = useRouter()
-  const [step, setStep] = useState(0)
+  const searchParams = useSearchParams()
+  const slugParam = searchParams.get("slug")
+  const pasoParam = searchParams.get("paso")
+
+  const [step, setStep] = useState(() => clampPaso(pasoParam) - 1)
   const [submitting, setSubmitting] = useState(false)
+  const [savingDraft, setSavingDraft] = useState(false)
+  const [loadingDraft, setLoadingDraft] = useState(Boolean(slugParam))
   const [error, setError] = useState<string | null>(null)
+
+  const [draftId, setDraftId] = useState<number | null>(null)
+  const [draftSlug, setDraftSlug] = useState<string | null>(slugParam)
+  const [draftVersion, setDraftVersion] = useState<number | null>(null)
+  const draftHydrated = useRef(false)
 
   const [categorias, setCategorias] = useState<ApiCategoria[]>([])
   const [catalogLoading, setCatalogLoading] = useState(true)
@@ -93,6 +165,7 @@ export function CrearClient() {
   const [summary, setSummary] = useState("")
   const [story, setStory] = useState("")
   const [zonaId, setZonaId] = useState("")
+  const [departamentoId, setDepartamentoId] = useState("")
   const [municipioNombre, setMunicipioNombre] = useState("—")
   const [lugarConvite, setLugarConvite] = useState("")
   const [lugarExacto, setLugarExacto] = useState("")
@@ -100,18 +173,13 @@ export function CrearClient() {
   const [deadline, setDeadline] = useState("")
   const [workday, setWorkday] = useState("")
   const [items, setItems] = useState<NeededItem[]>([
-    { id: "1", name: "", unit: "", quantity: "" },
+    { id: "1", name: "", unit: "unidades", quantity: "" },
   ])
-  type PuntoDraft = {
-    id: string
-    municipioId: string
-    municipioNombre: string
-    nombre: string
-    direccion: string
-    horario: string
-    contacto: string
-  }
   const [puntosAcopio, setPuntosAcopio] = useState<PuntoDraft[]>([])
+  const [portadaUrl, setPortadaUrl] = useState<string | null>(null)
+  const [galeria, setGaleria] = useState<GaleriaDraft[]>([])
+  const [enlaces, setEnlaces] = useState<EnlaceDraft[]>([])
+  const [mediaBusy, setMediaBusy] = useState(false)
   const [responsable, setResponsable] = useState("")
   const [respaldo, setRespaldo] = useState("")
   const [contacto, setContacto] = useState("")
@@ -127,6 +195,92 @@ export function CrearClient() {
     mode: "onBlur",
   })
   void form
+
+  function syncUrl(nextStep0: number, slug: string | null) {
+    const params = new URLSearchParams()
+    params.set("paso", String(nextStep0 + 1))
+    if (slug) params.set("slug", slug)
+    router.replace(`/crear?${params.toString()}`, { scroll: false })
+  }
+
+  function applyDraft(api: ApiIniciativa) {
+    setDraftId(api.id)
+    setDraftSlug(api.slug)
+    setDraftVersion(api.version)
+    setTitle(api.titulo ?? "")
+    setCategoriaId(api.categoria ? String(api.categoria.id) : "")
+    setUrgencia(api.urgencia || "media")
+    setSummary(api.resumen ?? "")
+    setStory(historiaFromApi(api.historia, api.resumen ?? ""))
+    setZonaId(api.municipio ? String(api.municipio.id) : "")
+    setDepartamentoId(
+      api.municipio?.departamento ? String(api.municipio.departamento.id) : "",
+    )
+    setMunicipioNombre(api.municipio?.nombre ?? "—")
+    setLugarConvite(
+      !api.lugar_convite || api.lugar_convite === "Por definir"
+        ? ""
+        : api.lugar_convite,
+    )
+    setLugarExacto(api.verificacion?.lugar_exacto || api.lugar_exacto || "")
+    if (api.ubicacion?.lat != null && api.ubicacion?.lng != null) {
+      setUbicacion({
+        lat: api.ubicacion.lat,
+        lng: api.ubicacion.lng,
+        fuente: "manual",
+      })
+    } else {
+      setUbicacion(null)
+    }
+    setDeadline(api.fecha_limite_aportes?.slice(0, 10) ?? "")
+    setWorkday(api.fecha_convite?.slice(0, 10) ?? "")
+    const apiItems = api.items ?? []
+    setItems(
+      apiItems.length > 0
+        ? apiItems.map((it) => ({
+            id: String(it.id),
+            name: it.nombre,
+            unit: ITEM_UNIDAD_VALUES.includes(
+              it.unidad as (typeof ITEM_UNIDAD_VALUES)[number],
+            )
+              ? it.unidad
+              : "unidades",
+            quantity: String(it.cantidad_meta),
+          }))
+        : [{ id: "1", name: "", unit: "unidades", quantity: "" }],
+    )
+    setPuntosAcopio(
+      (api.puntos_acopio ?? []).map((p) => ({
+        id: String(p.id),
+        departamentoId: p.municipio?.departamento
+          ? String(p.municipio.departamento.id)
+          : "",
+        municipioId: p.municipio ? String(p.municipio.id) : "",
+        municipioNombre: p.municipio?.nombre ?? "",
+        nombre: p.nombre,
+        direccion: p.direccion,
+        horario: p.horario ?? "",
+        contacto: p.contacto ?? "",
+      })),
+    )
+    setResponsable(api.verificacion?.persona_responsable ?? "")
+    setRespaldo(api.verificacion?.quien_respalda ?? "")
+    setContacto(api.verificacion?.telefono_contacto ?? "")
+    setPortadaUrl(api.imagen_path || null)
+    setGaleria(
+      (api.galeria ?? []).map((g) => ({
+        id: g.id,
+        url: g.url,
+      })),
+    )
+    setEnlaces(
+      (api.enlaces ?? []).map((e) => ({
+        id: String(e.id),
+        titulo: e.titulo,
+        url: e.url,
+      })),
+    )
+  }
 
   function snapshot(): CrearFormValues {
     return {
@@ -150,7 +304,33 @@ export function CrearClient() {
   }
 
   function validateStepOrError(): boolean {
-    const schema = CREAR_STEP_SCHEMAS[Math.min(step, 3)]
+    if (step === 3) {
+      const incomplete = enlaces.find(
+        (e) =>
+          (e.titulo.trim() && !e.url.trim()) ||
+          (!e.titulo.trim() && e.url.trim()),
+      )
+      if (incomplete) {
+        setError("Completa título y URL de cada enlace, o quítalo.")
+        return false
+      }
+      const badUrl = enlaces.find((e) => {
+        if (!e.url.trim()) return false
+        try {
+          const u = new URL(e.url.trim())
+          return u.protocol !== "http:" && u.protocol !== "https:"
+        } catch {
+          return true
+        }
+      })
+      if (badUrl) {
+        setError("Cada enlace debe ser una URL válida (https://…).")
+        return false
+      }
+      setError(null)
+      return true
+    }
+    const schema = CREAR_STEP_SCHEMAS[step] ?? crearFormSchema
     const parsed = schema.safeParse(snapshot())
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? "Revisa los campos de este paso")
@@ -159,6 +339,108 @@ export function CrearClient() {
     setError(null)
     return true
   }
+
+  function buildPayload(wizardPaso: number): Record<string, unknown> {
+    const historiaParrafos = story
+      .split(/\n+/)
+      .map((p) => p.trim())
+      .filter(Boolean)
+    const historia = historiaParrafos.length > 0 ? historiaParrafos : [""]
+
+    const validItems = items.filter(
+      (it) => it.name.trim() && it.unit.trim() && Number(it.quantity) > 0,
+    )
+
+    return {
+      municipio_id: zonaId ? Number(zonaId) : null,
+      categoria_id: Number(categoriaId),
+      titulo: title.trim(),
+      resumen: summary.trim(),
+      historia,
+      urgencia,
+      lugar_convite: lugarConvite.trim() || null,
+      lugar_exacto: lugarExacto.trim() || null,
+      lat: ubicacion?.lat ?? null,
+      lng: ubicacion?.lng ?? null,
+      geo_fuente: ubicacion?.fuente ?? null,
+      geo_precision: "punto",
+      mapa_visible: true,
+      fecha_limite_aportes: deadline || null,
+      fecha_convite: workday || null,
+      fecha_convite_texto: workday || null,
+      persona_responsable: responsable.trim() || null,
+      quien_respalda: respaldo.trim() || null,
+      telefono_contacto: contacto.trim() || null,
+      wizard_paso: wizardPaso,
+      items: validItems.map((it) => ({
+        nombre: it.name.trim(),
+        unidad: it.unit.trim(),
+        cantidad_meta: Number(it.quantity),
+      })),
+      puntos_acopio: puntosAcopio
+        .filter((p) => p.municipioId && p.nombre.trim() && p.direccion.trim())
+        .map((p) => ({
+          municipio_id: Number(p.municipioId),
+          nombre: p.nombre.trim(),
+          direccion: p.direccion.trim(),
+          horario: p.horario.trim() || null,
+          contacto: p.contacto.trim() || null,
+        })),
+      enlaces: enlaces
+        .filter((e) => e.titulo.trim() && e.url.trim())
+        .map((e, i) => ({
+          titulo: e.titulo.trim(),
+          url: e.url.trim(),
+          orden: i + 1,
+        })),
+    }
+  }
+
+  async function persistDraft(
+    wizardPaso: number,
+  ): Promise<{ ok: boolean; slug: string | null; id: number | null }> {
+    if (!token || !categoriaId || !title.trim()) {
+      setError("Completa título y categoría para guardar el borrador.")
+      return { ok: false, slug: draftSlug, id: draftId }
+    }
+    setSavingDraft(true)
+    setError(null)
+    try {
+      const payload = buildPayload(wizardPaso)
+      if (draftId != null && draftVersion != null) {
+        const updated = await updateIniciativa(token, draftId, {
+          ...payload,
+          version: draftVersion,
+        })
+        setDraftId(updated.id)
+        setDraftSlug(updated.slug)
+        setDraftVersion(updated.version)
+        return { ok: true, slug: updated.slug, id: updated.id }
+      }
+      const created = await createIniciativa(token, payload)
+      const id = Number(created.id)
+      setDraftId(id)
+      setDraftSlug(created.slug)
+      setDraftVersion(created.version ?? 1)
+      return { ok: true, slug: created.slug, id }
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.body.message || "No pudimos guardar el borrador."
+          : "No pudimos guardar el borrador.",
+      )
+      return { ok: false, slug: draftSlug, id: draftId }
+    } finally {
+      setSavingDraft(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!pasoParam) {
+      syncUrl(step, draftSlug)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pasoParam])
 
   useEffect(() => {
     let cancelled = false
@@ -179,6 +461,44 @@ export function CrearClient() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!token || !slugParam || draftHydrated.current) return
+    let cancelled = false
+    async function loadDraft() {
+      setLoadingDraft(true)
+      setError(null)
+      try {
+        const api = await fetchIniciativaApi(slugParam!, token)
+        if (cancelled) return
+        if (api.estado !== "borrador" && api.estado !== "rechazada") {
+          setError("Este convite ya no se puede editar en el asistente.")
+          setLoadingDraft(false)
+          return
+        }
+        applyDraft(api)
+        draftHydrated.current = true
+        const resumePaso = clampPaso(
+          pasoParam ?? (api.wizard_paso != null ? String(api.wizard_paso) : "1"),
+        )
+        setStep(resumePaso - 1)
+        syncUrl(resumePaso - 1, api.slug)
+      } catch {
+        if (!cancelled) {
+          setError(
+            "No pudimos cargar el borrador. Empieza uno nuevo o vuelve al panel.",
+          )
+        }
+      } finally {
+        if (!cancelled) setLoadingDraft(false)
+      }
+    }
+    void loadDraft()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, slugParam])
+
   function updateItem(id: string, patch: Partial<NeededItem>) {
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)))
   }
@@ -186,7 +506,7 @@ export function CrearClient() {
   function addItem() {
     setItems((prev) => [
       ...prev,
-      { id: crypto.randomUUID(), name: "", unit: "", quantity: "" },
+      { id: crypto.randomUUID(), name: "", unit: "unidades", quantity: "" },
     ])
   }
 
@@ -199,15 +519,124 @@ export function CrearClient() {
   const zonaNombre = municipioNombre
 
   const canContinue =
-    (step === 0 && title.trim() && categoriaId && summary.trim() && urgencia) ||
+    (step === 0 &&
+      title.trim() &&
+      categoriaId &&
+      summary.trim() &&
+      story.trim() &&
+      urgencia) ||
     (step === 1 && zonaId && lugarConvite.trim()) ||
     (step === 2 &&
       items.some((it) => it.name.trim() && it.unit.trim() && it.quantity)) ||
-    (step === 3 &&
+    step === 3 ||
+    (step === 4 &&
       responsable.trim() &&
       respaldo.trim() &&
       isPhoneValid(contacto, true)) ||
-    step === 4
+    step === 5
+
+  async function ensureDraftId(): Promise<number | null> {
+    if (draftId != null) return draftId
+    const result = await persistDraft(Math.min(step + 1, 6))
+    return result.ok ? result.id : null
+  }
+
+  async function onPortadaCropped(blob: Blob) {
+    if (!token) return
+    setMediaBusy(true)
+    setError(null)
+    try {
+      const id = await ensureDraftId()
+      if (id == null) return
+      const updated = await uploadIniciativaPortada(token, id, blob)
+      setDraftId(updated.id)
+      setDraftSlug(updated.slug)
+      setDraftVersion(updated.version)
+      setPortadaUrl(updated.imagen_path)
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.body.message || "No pudimos subir la portada."
+          : "No pudimos subir la portada.",
+      )
+    } finally {
+      setMediaBusy(false)
+    }
+  }
+
+  async function onClearPortada() {
+    // Portada se limpia en el siguiente guardado dejando imagen; por ahora solo UI.
+    // Quitar del servidor requeriría endpoint DELETE; mantenemos la última hasta reemplazar.
+    setPortadaUrl(null)
+  }
+
+  async function onGaleriaFiles(files: FileList | null) {
+    if (!token || !files?.length) return
+    setMediaBusy(true)
+    setError(null)
+    try {
+      const id = await ensureDraftId()
+      if (id == null) return
+      for (const file of Array.from(files)) {
+        if (!isImageFile(file)) {
+          setError("La galería solo acepta imágenes.")
+          continue
+        }
+        const resized = await resizeImageFile(file, 2000)
+        const uploaded = await uploadIniciativaGaleria(
+          token,
+          id,
+          resized,
+          file.name.replace(/\.\w+$/, "") + ".jpg",
+        )
+        setDraftVersion(uploaded.version)
+        setGaleria((prev) => [...prev, { id: uploaded.id, url: uploaded.url }])
+      }
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.body.message || "No pudimos subir una foto de la galería."
+          : "No pudimos subir una foto de la galería.",
+      )
+    } finally {
+      setMediaBusy(false)
+    }
+  }
+
+  async function onRemoveGaleria(galeriaId: number) {
+    if (!token || draftId == null) return
+    setMediaBusy(true)
+    setError(null)
+    try {
+      const updated = await deleteIniciativaGaleria(token, draftId, galeriaId)
+      setDraftVersion(updated.version)
+      setGaleria((prev) => prev.filter((g) => g.id !== galeriaId))
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.body.message || "No pudimos quitar la foto."
+          : "No pudimos quitar la foto.",
+      )
+    } finally {
+      setMediaBusy(false)
+    }
+  }
+
+  async function onContinue() {
+    if (!validateStepOrError()) return
+    const nextPaso = Math.min(step + 2, 6)
+    const result = await persistDraft(nextPaso)
+    if (!result.ok) return
+    const nextStep0 = step + 1
+    setStep(nextStep0)
+    syncUrl(nextStep0, result.slug)
+  }
+
+  function onBack() {
+    const nextStep0 = Math.max(0, step - 1)
+    setStep(nextStep0)
+    syncUrl(nextStep0, draftSlug)
+  }
 
   async function onEnviarRevision() {
     if (!token || submitting) return
@@ -218,15 +647,8 @@ export function CrearClient() {
       return
     }
 
-    const validItems = items.filter(
-      (it) => it.name.trim() && it.unit.trim() && Number(it.quantity) > 0,
-    )
-
     const incompletePunto = puntosAcopio.find(
-      (p) =>
-        !p.municipioId ||
-        !p.nombre.trim() ||
-        !p.direccion.trim(),
+      (p) => !p.municipioId || !p.nombre.trim() || !p.direccion.trim(),
     )
     if (incompletePunto) {
       setError(
@@ -235,55 +657,15 @@ export function CrearClient() {
       return
     }
 
-    const historiaParrafos = story
-      .split(/\n+/)
-      .map((p) => p.trim())
-      .filter(Boolean)
-    const historia =
-      historiaParrafos.length > 0 ? historiaParrafos : [summary.trim()]
-
     setSubmitting(true)
     setError(null)
     try {
-      const created = await createIniciativa(token, {
-        municipio_id: Number(zonaId),
-        categoria_id: Number(categoriaId),
-        titulo: title.trim(),
-        resumen: summary.trim(),
-        historia,
-        urgencia,
-        lugar_convite: lugarConvite.trim(),
-        lugar_exacto: lugarExacto.trim() || null,
-        lat: ubicacion?.lat ?? null,
-        lng: ubicacion?.lng ?? null,
-        geo_fuente: ubicacion?.fuente ?? null,
-        geo_precision: "punto",
-        mapa_visible: true,
-        fecha_limite_aportes: deadline || null,
-        fecha_convite: workday || null,
-        fecha_convite_texto: workday || null,
-        persona_responsable: responsable.trim(),
-        quien_respalda: respaldo.trim(),
-        telefono_contacto: contacto.trim(),
-        items: validItems.map((it) => ({
-          nombre: it.name.trim(),
-          unidad: it.unit.trim(),
-          cantidad_meta: Number(it.quantity),
-        })),
-        puntos_acopio: puntosAcopio
-          .filter(
-            (p) =>
-              p.municipioId && p.nombre.trim() && p.direccion.trim(),
-          )
-          .map((p) => ({
-            municipio_id: Number(p.municipioId),
-            nombre: p.nombre.trim(),
-            direccion: p.direccion.trim(),
-            horario: p.horario.trim() || null,
-            contacto: p.contacto.trim() || null,
-          })),
-      })
-      await enviarRevision(token, created.id)
+      const result = await persistDraft(6)
+      if (!result.ok || result.id == null) {
+        setSubmitting(false)
+        return
+      }
+      await enviarRevision(token, result.id)
       router.push("/panel/creador")
     } catch (err) {
       setError(
@@ -296,10 +678,10 @@ export function CrearClient() {
     }
   }
 
-  if (authLoading || !token) {
+  if (authLoading || !token || loadingDraft) {
     return (
       <div className="mx-auto max-w-3xl py-16 text-center text-sm text-muted-foreground">
-        Comprobando sesión…
+        {loadingDraft ? "Cargando borrador…" : "Comprobando sesión…"}
       </div>
     )
   }
@@ -308,10 +690,10 @@ export function CrearClient() {
     <div className="mx-auto max-w-3xl py-10 md:py-14">
       <div className="mb-8">
         <Link
-          href="/"
+          href="/panel/creador"
           className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
-          <ArrowLeft className="h-4 w-4" /> Volver al inicio
+          <ArrowLeft className="h-4 w-4" /> Volver al panel
         </Link>
         <h1 className="text-balance font-serif text-3xl text-foreground md:text-4xl">
           Abre un convite
@@ -320,6 +702,11 @@ export function CrearClient() {
           Cuéntanos qué necesita tu comunidad. Las personas aportan trabajo,
           materiales y tiempo, nunca dinero a través de la plataforma.
         </p>
+        {draftSlug ? (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Borrador guardado · paso {step + 1} de {steps.length}
+          </p>
+        ) : null}
       </div>
 
       {/* Stepper */}
@@ -433,13 +820,14 @@ export function CrearClient() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="story">La historia (opcional)</Label>
+              <Label htmlFor="story">La historia</Label>
               <Textarea
                 id="story"
                 rows={5}
                 placeholder="Cuenta con más detalle qué pasó y por qué la comunidad se está uniendo."
                 value={story}
                 onChange={(e) => setStory(e.target.value)}
+                required
               />
             </div>
           </div>
@@ -449,6 +837,8 @@ export function CrearClient() {
           <div className="space-y-5">
             <DepartamentoMunicipioSelect
               municipioId={zonaId}
+              departamentoId={departamentoId}
+              onDepartamentoChange={setDepartamentoId}
               onMunicipioChange={(id, nombre) => {
                 setZonaId(id)
                 setMunicipioNombre(nombre || "—")
@@ -515,6 +905,14 @@ export function CrearClient() {
                   </div>
                   <DepartamentoMunicipioSelect
                     municipioId={p.municipioId}
+                    departamentoId={p.departamentoId}
+                    onDepartamentoChange={(id) =>
+                      setPuntosAcopio((prev) =>
+                        prev.map((x) =>
+                          x.id === p.id ? { ...x, departamentoId: id } : x,
+                        ),
+                      )
+                    }
                     onMunicipioChange={(id, nombre) =>
                       setPuntosAcopio((prev) =>
                         prev.map((x) =>
@@ -569,26 +967,19 @@ export function CrearClient() {
                       }
                     />
                   </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor={`punto-hor-${p.id}`}>
-                        Horario (opcional)
-                      </Label>
-                      <Input
-                        id={`punto-hor-${p.id}`}
-                        placeholder="Lun–Vie 9–17"
-                        value={p.horario}
-                        onChange={(e) =>
-                          setPuntosAcopio((prev) =>
-                            prev.map((x) =>
-                              x.id === p.id
-                                ? { ...x, horario: e.target.value }
-                                : x,
-                            ),
-                          )
-                        }
-                      />
-                    </div>
+                  <div className="space-y-4">
+                    <HorarioSemanaGrid
+                      id={`punto-hor-${p.id}`}
+                      label="Horario del punto (opcional)"
+                      value={p.horario}
+                      onChange={(horario) =>
+                        setPuntosAcopio((prev) =>
+                          prev.map((x) =>
+                            x.id === p.id ? { ...x, horario } : x,
+                          ),
+                        )
+                      }
+                    />
                     <div className="space-y-2">
                       <Label htmlFor={`punto-cel-${p.id}`}>
                         Contacto (opcional)
@@ -621,6 +1012,7 @@ export function CrearClient() {
                       ...prev,
                       {
                         id: crypto.randomUUID(),
+                        departamentoId: "",
                         municipioId: "",
                         municipioNombre: "",
                         nombre: "",
@@ -673,15 +1065,13 @@ export function CrearClient() {
               </p>
             </div>
             <div className="space-y-4">
-              {items.map((it, idx) => (
+              {items.map((it) => (
                 <div
                   key={it.id}
-                  className="grid gap-3 rounded-lg border border-border bg-background p-4 sm:grid-cols-[1fr_130px_130px_auto] sm:items-end"
+                  className="grid gap-3 rounded-lg border border-border bg-background p-4 sm:grid-cols-[1fr_140px_160px_auto] sm:items-end"
                 >
                   <div className="space-y-2">
-                    <Label htmlFor={`name-${it.id}`}>
-                      {idx === 0 ? "Qué se necesita" : ""}
-                    </Label>
+                    <Label htmlFor={`name-${it.id}`}>¿Qué se necesita?</Label>
                     <Input
                       id={`name-${it.id}`}
                       placeholder="Ej: Tejas de zinc"
@@ -690,24 +1080,44 @@ export function CrearClient() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor={`qty-${it.id}`}>{idx === 0 ? "Cantidad" : ""}</Label>
+                    <Label htmlFor={`qty-${it.id}`}>¿Cuántas unidades?</Label>
                     <Input
                       id={`qty-${it.id}`}
                       type="number"
                       min={1}
                       placeholder="40"
                       value={it.quantity}
-                      onChange={(e) => updateItem(it.id, { quantity: e.target.value })}
+                      onChange={(e) =>
+                        updateItem(it.id, { quantity: e.target.value })
+                      }
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor={`unit-${it.id}`}>{idx === 0 ? "Unidad" : ""}</Label>
-                    <Input
-                      id={`unit-${it.id}`}
-                      placeholder="tejas"
-                      value={it.unit}
-                      onChange={(e) => updateItem(it.id, { unit: e.target.value })}
-                    />
+                    <Label htmlFor={`unit-${it.id}`}>¿Tipo?</Label>
+                    <Select
+                      value={it.unit || "unidades"}
+                      onValueChange={(v) =>
+                        updateItem(it.id, { unit: v ?? "unidades" })
+                      }
+                      items={ITEM_UNIDAD_OPTIONS.map((o) => ({
+                        value: o.value,
+                        label: o.label,
+                      }))}
+                    >
+                      <SelectTrigger
+                        id={`unit-${it.id}`}
+                        className="mb-0 h-8 w-full"
+                      >
+                        <SelectValue placeholder="Elige el tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ITEM_UNIDAD_OPTIONS.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <Button
                     variant="ghost"
@@ -729,6 +1139,154 @@ export function CrearClient() {
         )}
 
         {step === 3 && (
+          <div className="space-y-8">
+            <PortadaCrop
+              previewUrl={portadaUrl}
+              onCropped={onPortadaCropped}
+              onClear={() => void onClearPortada()}
+              busy={mediaBusy}
+            />
+
+            <div className="space-y-3 border-t border-border pt-6">
+              <Label>Galería de fotos</Label>
+              <p className="text-sm text-muted-foreground">
+                Puedes subir más fotos. Las reducimos automáticamente a máximo
+                2000×2000 px sin deformarlas.
+              </p>
+              {galeria.length > 0 ? (
+                <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {galeria.map((g) => (
+                    <li
+                      key={g.id}
+                      className="group relative aspect-square overflow-hidden rounded-xl border border-border bg-muted"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={g.url}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-2 top-2 rounded-full bg-background/90 p-1.5 text-muted-foreground opacity-0 shadow transition-opacity group-hover:opacity-100 hover:text-destructive"
+                        aria-label="Quitar foto"
+                        disabled={mediaBusy}
+                        onClick={() => void onRemoveGaleria(g.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {galeria.length < 12 ? (
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground">
+                  <ImagePlus className="h-4 w-4 text-primary" />
+                  {mediaBusy ? "Subiendo…" : "Agregar fotos"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="sr-only"
+                    disabled={mediaBusy}
+                    onChange={(e) => {
+                      void onGaleriaFiles(e.target.files)
+                      e.target.value = ""
+                    }}
+                  />
+                </label>
+              ) : null}
+            </div>
+
+            <div className="space-y-4 border-t border-border pt-6">
+              <div>
+                <Label className="inline-flex items-center gap-2">
+                  <Link2 className="h-4 w-4" /> Enlaces externos
+                </Label>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Opcional. Noticias, redes o páginas relacionadas con el
+                  convite.
+                </p>
+              </div>
+              {enlaces.map((enlace, idx) => (
+                <div
+                  key={enlace.id}
+                  className="grid gap-3 rounded-lg border border-border bg-background p-4 sm:grid-cols-[1fr_1.4fr_auto] sm:items-end"
+                >
+                  <div className="space-y-2">
+                    <Label htmlFor={`enlace-t-${enlace.id}`}>
+                      {idx === 0 ? "Título" : ""}
+                    </Label>
+                    <Input
+                      id={`enlace-t-${enlace.id}`}
+                      placeholder="Ej: Nota en El Tiempo"
+                      value={enlace.titulo}
+                      onChange={(e) =>
+                        setEnlaces((prev) =>
+                          prev.map((x) =>
+                            x.id === enlace.id
+                              ? { ...x, titulo: e.target.value }
+                              : x,
+                          ),
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor={`enlace-u-${enlace.id}`}>
+                      {idx === 0 ? "URL" : ""}
+                    </Label>
+                    <Input
+                      id={`enlace-u-${enlace.id}`}
+                      type="url"
+                      placeholder="https://"
+                      value={enlace.url}
+                      onChange={(e) =>
+                        setEnlaces((prev) =>
+                          prev.map((x) =>
+                            x.id === enlace.id
+                              ? { ...x, url: e.target.value }
+                              : x,
+                          ),
+                        )
+                      }
+                    />
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Eliminar enlace"
+                    onClick={() =>
+                      setEnlaces((prev) =>
+                        prev.filter((x) => x.id !== enlace.id),
+                      )
+                    }
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              {enlaces.length < 20 ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() =>
+                    setEnlaces((prev) => [
+                      ...prev,
+                      { id: crypto.randomUUID(), titulo: "", url: "" },
+                    ])
+                  }
+                >
+                  <Plus className="h-4 w-4" /> Agregar enlace
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        )}
+
+        {step === 4 && (
           <div className="space-y-5">
             <div className="flex items-start gap-3 rounded-lg border border-primary/25 bg-primary/5 p-4">
               <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
@@ -771,7 +1329,7 @@ export function CrearClient() {
           </div>
         )}
 
-        {step === 4 && (
+        {step === 5 && (
           <div className="space-y-6">
             <div className="space-y-1">
               <p className="text-xs font-semibold uppercase tracking-wide text-primary">
@@ -911,30 +1469,35 @@ export function CrearClient() {
         <div className="mt-8 flex items-center justify-between border-t border-border pt-6">
           <Button
             variant="ghost"
-            onClick={() => setStep((s) => Math.max(0, s - 1))}
-            disabled={step === 0 || submitting}
+            onClick={onBack}
+            disabled={step === 0 || submitting || savingDraft}
             className="gap-2"
           >
             <ArrowLeft className="h-4 w-4" /> Atrás
           </Button>
           {step < steps.length - 1 ? (
             <Button
-              onClick={() => {
-                if (!validateStepOrError()) return
-                setStep((s) => s + 1)
-              }}
-              disabled={!canContinue}
+              onClick={() => void onContinue()}
+              disabled={
+                !canContinue || submitting || savingDraft || mediaBusy
+              }
               className="gap-2"
             >
-              Continuar <ArrowRight className="h-4 w-4" />
+              {savingDraft ? "Guardando…" : "Continuar"}{" "}
+              <ArrowRight className="h-4 w-4" />
             </Button>
           ) : (
             <Button
               onClick={() => void onEnviarRevision()}
-              disabled={!aceptaTerminos || !aceptaDescargo || submitting}
+              disabled={
+                !aceptaTerminos ||
+                !aceptaDescargo ||
+                submitting ||
+                savingDraft
+              }
               className="gap-2"
             >
-              {submitting ? "Enviando…" : "Enviar a revisión"}{" "}
+              {submitting || savingDraft ? "Enviando…" : "Enviar a revisión"}{" "}
               <Check className="h-4 w-4" />
             </Button>
           )}

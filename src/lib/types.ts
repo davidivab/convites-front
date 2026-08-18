@@ -8,6 +8,8 @@ export type AuthUser = {
   permissions: string[];
   /** Municipios asignados (moderador / voluntario) */
   municipio_ids?: number[];
+  /** true si faltan términos/descargo (registro Google a medias) */
+  needs_onboarding?: boolean;
 };
 
 export type ApiZona = {
@@ -47,6 +49,32 @@ export type ApiIniciativaItem = {
   faltante: number;
   progreso: number;
   orden: number;
+};
+
+/** Ítem pendiente en búsqueda inversa (GET /api/materiales). */
+export type ApiMaterial = {
+  id: number;
+  nombre: string;
+  unidad: string;
+  cantidad_meta: number;
+  cantidad_aportada: number;
+  faltante: number;
+  progreso: number;
+  iniciativa: {
+    id: number;
+    slug: string;
+    titulo: string;
+    urgencia: "alta" | "media" | "baja";
+    urgencia_label?: string;
+    imagen_path: string | null;
+    municipio?: {
+      id: number;
+      slug: string;
+      nombre: string;
+      departamento?: { id: number; slug: string; nombre: string } | null;
+    } | null;
+    categoria?: { id: number; slug: string; nombre: string } | null;
+  };
 };
 
 /** Punto de recolección (puede ser otra ciudad que el destino del convite) */
@@ -104,13 +132,35 @@ export type ApiIniciativa = {
   enlace_externo: { plataforma: string; url: string } | null;
   items: ApiIniciativaItem[];
   puntos_acopio?: ApiPuntoAcopio[];
+  galeria?: Array<{
+    id: number;
+    url: string;
+    orden: number;
+    ancho?: number | null;
+    alto?: number | null;
+  }>;
+  enlaces?: Array<{
+    id: number;
+    titulo: string;
+    url: string;
+    orden: number;
+  }>;
   asistentes_count: number;
   progreso: number;
   /** Optimistic lock — reenviar en PUT /iniciativas/{id} */
   version: number;
+  /** Paso del wizard /crear (1–6), null si no aplica */
+  wizard_paso?: number | null;
   destacada: boolean;
   publicada_at: string | null;
   created_at: string | null;
+  /** Solo owner / moderador / admin */
+  verificacion?: {
+    persona_responsable: string | null;
+    quien_respalda: string | null;
+    telefono_contacto: string | null;
+    lugar_exacto: string | null;
+  } | null;
 };
 
 export type ApiAporte = {
@@ -163,6 +213,7 @@ export type ApiCentro = {
   tipo_label?: string;
   nombre: string;
   direccion: string;
+  url_externa?: string | null;
   telefono: string | null;
   horario: string | null;
   estado: string;
@@ -228,6 +279,7 @@ export type ApiProfile = {
     nombre: string;
     departamento?: { id: number; slug: string; nombre: string } | null;
   } | null;
+  barrio?: string | null;
   genero: string | null;
   edad: number | null;
   aptitud_fisica: string | null;

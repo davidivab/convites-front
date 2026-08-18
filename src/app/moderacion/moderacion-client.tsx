@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
+import { DashboardShell } from "@/components/layout/dashboard-shell"
 import { useRequireRoleTree } from "@/hooks/use-require-role-tree"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -15,15 +16,34 @@ import {
   type ApiNotification,
 } from "@/lib/convites-api"
 import type { Iniciativa } from "@/lib/data"
+import { perfilTabsForRole } from "@/lib/role-tree"
 import { Bell, Check, X, MapPin, Clock, Package, ShieldCheck, MessageSquare } from "lucide-react"
 
 type DecisionLocal = "aprobada" | "rechazada" | "cambios" | null
 
-export function ModeracionClient() {
-  const { token, loading: authLoading, hasPermission } = useRequireRoleTree(
-    "/moderacion",
-    "moderador",
+export function ModeracionClient({
+  basePath = "/moderacion",
+  /** Prefijo de edición: /moderacion/convites → …/slug/editar; /admin/convites → …/slug */
+  editPathPrefix = "/moderacion/convites",
+  editWithSuffix = true,
+  allowedRoles = ["admin", "moderador"] as const,
+}: {
+  basePath?: string
+  editPathPrefix?: string
+  /** Si false, el enlace es `${editPathPrefix}/${slug}` (admin). */
+  editWithSuffix?: boolean
+  allowedRoles?: readonly ("admin" | "moderador")[]
+}) {
+  const { user, token, loading: authLoading, hasPermission } = useRequireRoleTree(
+    basePath,
+    [...allowedRoles],
   )
+
+  function editHref(slug: string) {
+    return editWithSuffix
+      ? `${editPathPrefix}/${slug}/editar`
+      : `${editPathPrefix}/${slug}`
+  }
   const [cola, setCola] = useState<Iniciativa[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -147,7 +167,9 @@ export function ModeracionClient() {
 
   if (authLoading) {
     return (
-      <p className="text-sm text-muted-foreground">Comprobando permisos…</p>
+      <p className="mx-auto max-w-6xl px-4 py-16 text-sm text-muted-foreground">
+        Comprobando permisos…
+      </p>
     )
   }
 
@@ -155,23 +177,29 @@ export function ModeracionClient() {
 
   if (!canModerate) {
     return (
-      <div className="rounded-xl border border-border bg-card p-8 text-center">
+      <div className="mx-auto max-w-xl px-4 py-16 text-center">
         <p className="font-medium text-foreground">
           No tienes permiso de moderación
         </p>
         <p className="mt-2 text-sm text-muted-foreground">
           Esta cola solo está disponible para el equipo moderador.
         </p>
-        <Button className="mt-4" render={<Link href="/panel/aportante" />}>
-          Volver a mi panel
+        <Button className="mt-4" render={<Link href="/" />}>
+          Volver al inicio
         </Button>
       </div>
     )
   }
 
   const pendientes = cola.filter((i) => !decisiones[i.id]).length
+  const tabs = perfilTabsForRole(user, basePath)
 
   return (
+    <DashboardShell
+      title="Cola de moderación"
+      subtitle="Revisamos cada convite antes de publicarlo. Verificamos que sea real, que la comunidad lo respalde y que no pida dinero por fuera de las reglas."
+      tabs={tabs}
+    >
     <div>
       <section className="mb-8 rounded-xl border border-border bg-card/60 p-4 md:p-5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -306,6 +334,15 @@ export function ModeracionClient() {
                     <p className="mt-3 text-sm font-medium text-foreground">
                       Propone: {item.creador}
                     </p>
+                    <div className="mt-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        render={<Link href={editHref(item.slug)} />}
+                      >
+                        Editar convite / aportes
+                      </Button>
+                    </div>
 
                     <div className="mt-4 flex flex-wrap gap-2">
                       {item.items.map((it) => (
@@ -391,5 +428,6 @@ export function ModeracionClient() {
         </div>
       )}
     </div>
+    </DashboardShell>
   )
 }

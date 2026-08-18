@@ -16,6 +16,12 @@ import { cn } from "@/lib/utils"
 type Props = {
   municipioId: string
   onMunicipioChange: (municipioId: string, municipioNombre?: string) => void
+  /**
+   * Departamento controlado (p. ej. hidratar desde perfil.municipio.departamento).
+   * Si no se pasa, el componente mantiene estado interno.
+   */
+  departamentoId?: string
+  onDepartamentoChange?: (departamentoId: string) => void
   required?: boolean
   optional?: boolean
   className?: string
@@ -31,6 +37,8 @@ type Props = {
 export function DepartamentoMunicipioSelect({
   municipioId,
   onMunicipioChange,
+  departamentoId: departamentoIdProp,
+  onDepartamentoChange,
   required = false,
   optional = false,
   className,
@@ -40,9 +48,14 @@ export function DepartamentoMunicipioSelect({
 }: Props) {
   const [departamentos, setDepartamentos] = useState<ApiDepartamento[]>([])
   const [municipios, setMunicipios] = useState<ApiMunicipio[]>([])
-  const [departamentoId, setDepartamentoId] = useState("")
+  const [departamentoIdInternal, setDepartamentoIdInternal] = useState("")
   const [loadingDepts, setLoadingDepts] = useState(true)
   const [loadingMun, setLoadingMun] = useState(false)
+
+  const controlled = departamentoIdProp !== undefined
+  const departamentoId = controlled
+    ? departamentoIdProp
+    : departamentoIdInternal
 
   useEffect(() => {
     let cancelled = false
@@ -50,7 +63,15 @@ export function DepartamentoMunicipioSelect({
       setLoadingDepts(true)
       try {
         const data = await fetchDepartamentos(false, { incluirInactivos })
-        if (!cancelled) setDepartamentos(data)
+        if (!cancelled) {
+          setDepartamentos(
+            incluirInactivos
+              ? [...data].sort((a, b) =>
+                  a.nombre.localeCompare(b.nombre, "es", { sensitivity: "base" }),
+                )
+              : data,
+          )
+        }
       } catch {
         if (!cancelled) setDepartamentos([])
       } finally {
@@ -75,7 +96,15 @@ export function DepartamentoMunicipioSelect({
         const data = await fetchMunicipios(Number(departamentoId), false, {
           incluirInactivos,
         })
-        if (!cancelled) setMunicipios(data)
+        if (!cancelled) {
+          setMunicipios(
+            incluirInactivos
+              ? [...data].sort((a, b) =>
+                  a.nombre.localeCompare(b.nombre, "es", { sensitivity: "base" }),
+                )
+              : data,
+          )
+        }
       } catch {
         if (!cancelled) setMunicipios([])
       } finally {
@@ -88,9 +117,13 @@ export function DepartamentoMunicipioSelect({
     }
   }, [departamentoId, incluirInactivos])
 
-  function onDepartamentoChange(value: string | null) {
+  function handleDepartamentoChange(value: string | null) {
     const next = value ?? ""
-    setDepartamentoId(next)
+    if (controlled) {
+      onDepartamentoChange?.(next)
+    } else {
+      setDepartamentoIdInternal(next)
+    }
     onMunicipioChange("", undefined)
   }
 
@@ -113,7 +146,7 @@ export function DepartamentoMunicipioSelect({
         </Label>
         <Select
           value={departamentoId || undefined}
-          onValueChange={onDepartamentoChange}
+          onValueChange={handleDepartamentoChange}
           disabled={loadingDepts}
           items={departamentos.map((d) => ({
             value: String(d.id),
@@ -161,7 +194,7 @@ export function DepartamentoMunicipioSelect({
                   ? "Primero elige departamento"
                   : loadingMun
                     ? "Cargando…"
-                    : "Elige un municipio"
+                    : "Elige una ciudad"
               }
             />
           </SelectTrigger>

@@ -3,7 +3,7 @@ import { SiteFooter } from '@/components/layout/site-footer'
 import { CrearClient } from './crear-client'
 
 export const metadata = {
-  title: 'Crear una iniciativa — Convites',
+  title: 'Crear un convite — Convites',
   description: 'Cuéntanos qué necesita tu barrio o vereda y arma la lista de insumos del convite.',
 }
 

@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Menu, X } from "lucide-react";
+import { ChevronDown, LogOut, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Wordmark } from "@/components/layout/brand-mark";
 import { useAuth } from "@/components/auth/auth-provider";
+import { accountMenuItems } from "@/lib/account-menu";
 import { cn } from "@/lib/utils";
 
 type NavLink = { href: string; label: string };
@@ -24,7 +25,7 @@ const NAV: NavItem[] = [
       { href: "/manos-profesionales", label: "Manos profesionales" },
     ],
   },
-  { href: "/crear", label: "Crear iniciativa" },
+  { href: "/crear", label: "Crear un convite" },
   { href: "/quienes-somos", label: "Quiénes somos" },
 ];
 
@@ -96,10 +97,102 @@ function DesktopDropdown({
   );
 }
 
+function AccountMenu({
+  name,
+  onLogout,
+}: {
+  name: string
+  onLogout: () => void
+}) {
+  const pathname = usePathname()
+  const { user } = useAuth()
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const items = accountMenuItems(user)
+
+  useEffect(() => {
+    setOpen(false)
+  }, [pathname])
+
+  useEffect(() => {
+    function onClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false)
+    }
+    document.addEventListener("mousedown", onClick)
+    document.addEventListener("keydown", onKey)
+    return () => {
+      document.removeEventListener("mousedown", onClick)
+      document.removeEventListener("keydown", onKey)
+    }
+  }, [])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        className="inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+      >
+        <span className="max-w-[9rem] truncate">{name.split(" ")[0]}</span>
+        <ChevronDown
+          className={cn("size-4 transition-transform", open && "rotate-180")}
+        />
+      </button>
+      {open ? (
+        <div role="menu" className="absolute right-0 top-full z-50 min-w-56 pt-2">
+          <div className="overflow-hidden rounded-xl border border-border bg-popover p-1.5 shadow-lg">
+            {items.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                role="menuitem"
+                onClick={() => setOpen(false)}
+                className={cn(
+                  "block rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-muted",
+                  pathname === item.href || pathname.startsWith(item.href + "/")
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground",
+                )}
+              >
+                {item.label}
+              </Link>
+            ))}
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false)
+                onLogout()
+              }}
+              className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <LogOut className="size-4" />
+              Cerrar sesión
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 export function SiteHeader() {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const { user, loading, logout, hasPermission } = useAuth();
+
+  async function onLogout() {
+    await logout();
+    router.push("/");
+  }
+
+  const accountItems = accountMenuItems(user);
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-background/85 backdrop-blur-md">
@@ -136,7 +229,17 @@ export function SiteHeader() {
               </Link>
             ),
           )}
-          {hasPermission("iniciativas.moderate") ? (
+          {hasPermission("users.manage") ? (
+            <Link
+              href="/admin/usuarios"
+              className={cn(
+                "rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+                pathname.startsWith("/admin") && "text-foreground",
+              )}
+            >
+              Admin
+            </Link>
+          ) : hasPermission("iniciativas.moderate") ? (
             <Link
               href="/moderacion"
               className={cn(
@@ -147,37 +250,11 @@ export function SiteHeader() {
               Moderación
             </Link>
           ) : null}
-          {hasPermission("users.manage") ? (
-            <Link
-              href="/admin"
-              className={cn(
-                "rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-                pathname === "/admin" && "text-foreground",
-              )}
-            >
-              Admin
-            </Link>
-          ) : null}
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
           {loading ? null : user ? (
-            <>
-              <Button
-                variant="ghost"
-                size="lg"
-                render={<Link href="/panel/aportante" />}
-              >
-                {user.name.split(" ")[0]}
-              </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={() => void logout()}
-              >
-                Salir
-              </Button>
-            </>
+            <AccountMenu name={user.name} onLogout={() => void onLogout()} />
           ) : (
             <>
               <Button
@@ -242,26 +319,30 @@ export function SiteHeader() {
             <div className="mt-2 flex flex-col gap-2">
               {user ? (
                 <>
+                  <p className="px-3 pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Mi cuenta
+                  </p>
+                  {accountItems.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setOpen(false)}
+                      className="rounded-lg px-3 py-2.5 text-base font-medium text-foreground hover:bg-muted"
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
                   <Button
+                    size="lg"
                     variant="outline"
-                    size="lg"
-                    render={
-                      <Link
-                        href="/panel/aportante"
-                        onClick={() => setOpen(false)}
-                      />
-                    }
-                  >
-                    Mi panel
-                  </Button>
-                  <Button
-                    size="lg"
+                    className="mt-1 gap-2"
                     onClick={() => {
                       setOpen(false);
-                      void logout();
+                      void onLogout();
                     }}
                   >
-                    Salir
+                    <LogOut className="size-4" />
+                    Cerrar sesión
                   </Button>
                 </>
               ) : (

@@ -56,11 +56,15 @@ export type Iniciativa = {
     contacto: string | null;
     ciudad: string;
   }>;
+  galeria?: Array<{ id: string; url: string }>;
+  enlaces?: Array<{ id: string; titulo: string; url: string }>;
   ayudantes: Ayudante[];
   asistentes: number;
   progreso?: number;
   /** Optimistic lock del API — enviar en PUT */
   version?: number;
+  /** Paso 1–5 del wizard /crear para retomar borradores */
+  wizardPaso?: number | null;
   enlaceExterno?: { plataforma: string; url: string };
   notaModeracion?: string | null;
 };
@@ -151,11 +155,12 @@ export const APTITUD_FISICA = [
   },
 ];
 
+/** Valores alineados con App\Enums\Genero en la API. */
 export const GENEROS = [
   { value: "mujer", label: "Mujer" },
   { value: "hombre", label: "Hombre" },
-  { value: "no-binario", label: "No binario" },
-  { value: "prefiero-no-decir", label: "Prefiero no decir" },
+  { value: "no_binario", label: "No binario" },
+  { value: "prefiero_no_decir", label: "Prefiero no decir" },
 ];
 
 export type TipoCentro =
@@ -164,7 +169,8 @@ export type TipoCentro =
   | "bomberos"
   | "hospital"
   | "policia"
-  | "defensa-civil";
+  | "defensa-civil"
+  | "censo";
 
 export type EstadoCentro = "abierto" | "cerrado" | "lleno" | "24h";
 
@@ -182,6 +188,7 @@ export type Centro = {
   noRecibe?: string[];
   capacidad?: { total: number; ocupado: number };
   emergencia?: boolean;
+  urlExterna?: string | null;
 };
 
 export const TIPO_CENTRO: Record<TipoCentro, { label: string; plural: string }> = {
@@ -191,6 +198,7 @@ export const TIPO_CENTRO: Record<TipoCentro, { label: string; plural: string }> 
   hospital: { label: "Hospital / centro de salud", plural: "Hospitales" },
   policia: { label: "Policía", plural: "Policía" },
   "defensa-civil": { label: "Defensa Civil", plural: "Defensa Civil" },
+  censo: { label: "Censo de afectaciones", plural: "Censo de afectaciones" },
 };
 
 export const ESTADO_CENTRO_LABEL: Record<EstadoCentro, string> = {

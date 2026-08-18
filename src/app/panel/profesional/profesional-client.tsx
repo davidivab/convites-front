@@ -19,11 +19,13 @@ import { ApiError } from "@/lib/api"
 import {
   fetchMiPerfilProfesional,
   fetchMisSolicitudesProfesional,
+  patchSolicitudProfesional,
   updateMiPerfilProfesional,
   type ApiMiPerfilProfesional,
   type ApiProfesionalSolicitud,
+  type EstadoSolicitudProfesional,
 } from "@/lib/convites-api"
-import { canAccessProfesionalPanel } from "@/lib/role-tree"
+import { canAccessProfesionalPanel, perfilTabsForRole } from "@/lib/role-tree"
 import { PhoneInput, isPhoneValid } from "@/components/ui/phone-input"
 
 const MODALIDADES = [
@@ -31,6 +33,17 @@ const MODALIDADES = [
   { value: "virtual", label: "Virtual" },
   { value: "presencial_y_virtual", label: "Presencial y virtual" },
 ]
+
+const ESTADOS_SOLICITUD: { value: EstadoSolicitudProfesional; label: string }[] =
+  [
+    { value: "pendiente", label: "Pendiente" },
+    { value: "notificada", label: "Notificada" },
+    { value: "atendida", label: "Atendida" },
+    { value: "negada", label: "Negada" },
+    { value: "trasladada", label: "Trasladada" },
+    { value: "no_contesta", label: "No contesta" },
+    { value: "spam", label: "Spam" },
+  ]
 
 export function PanelProfesionalClient() {
   const auth = useRequireAuth("/panel/profesional")
@@ -43,6 +56,9 @@ export function PanelProfesionalClient() {
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [savedMsg, setSavedMsg] = useState<string | null>(null)
+  const [busySolicitudId, setBusySolicitudId] = useState<number | null>(null)
+  const [notaDraft, setNotaDraft] = useState<Record<number, string>>({})
+  const [tab, setTab] = useState<"perfil" | "solicitudes">("perfil")
 
   const [titulo, setTitulo] = useState("")
   const [celular, setCelular] = useState("")
@@ -120,6 +136,32 @@ export function PanelProfesionalClient() {
     }
   }
 
+  async function onPatchSolicitud(
+    s: ApiProfesionalSolicitud,
+    patch: { estado?: EstadoSolicitudProfesional; nota?: string },
+  ) {
+    if (!token || busySolicitudId) return
+    setBusySolicitudId(s.id)
+    setError(null)
+    try {
+      const updated = await patchSolicitudProfesional(token, s.id, patch)
+      setSolicitudes((prev) =>
+        prev.map((row) => (row.id === s.id ? updated : row)),
+      )
+      if (patch.nota) {
+        setNotaDraft((prev) => ({ ...prev, [s.id]: "" }))
+      }
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.body.message || "No pudimos actualizar la solicitud."
+          : "No pudimos actualizar la solicitud.",
+      )
+    } finally {
+      setBusySolicitudId(null)
+    }
+  }
+
   if (authLoading || (!token && loading)) {
     return (
       <div className="mx-auto max-w-6xl px-4 py-16 text-center text-sm text-muted-foreground">
@@ -135,20 +177,25 @@ export function PanelProfesionalClient() {
       <div className="mx-auto max-w-xl px-4 py-16 text-center">
         <h1 className="font-serif text-2xl text-foreground">Sin acceso</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Este panel es para cuentas con perfil profesional registrado.
+          Este panel se activa cuando un moderador aprueba tu perfil profesional.
+          Si ya enviaste el formulario, tu solicitud está en revisión.
         </p>
-        <Button className="mt-4" render={<Link href="/registro-profesional" />}>
-          Registrarme como profesional
-        </Button>
+        <div className="mt-4 flex flex-wrap justify-center gap-3">
+          <Button render={<Link href="/panel/roles/profesional" />}>
+            Ver estado de la solicitud
+          </Button>
+          <Button
+            variant="outline"
+            render={<Link href="/panel/roles/profesional/registro" />}
+          >
+            Enviar / completar registro
+          </Button>
+        </div>
       </div>
     )
   }
 
-  const tabs = [
-    { href: "/panel/aportante", label: "Aportante" },
-    { href: "/panel/creador", label: "Organizador" },
-    { href: "/panel/profesional", label: "Profesional", active: true },
-  ]
+  const tabs = perfilTabsForRole(user, "/panel/profesional")
 
   return (
     <DashboardShell
@@ -164,11 +211,131 @@ export function PanelProfesionalClient() {
       ) : !perfil ? (
         <div className="rounded-xl border border-dashed border-border p-8 text-center">
           <p className="font-medium text-foreground">Sin perfil profesional</p>
-          <Button className="mt-4" render={<Link href="/registro-profesional" />}>
+          <Button className="mt-4" render={<Link href="/panel/roles/profesional/registro" />}>
             Crear registro
           </Button>
         </div>
       ) : (
+        <div className="space-y-8">
+          <div className="flex gap-1 rounded-lg border border-border p-1 w-fit">
+            <Button
+              type="button"
+              size="sm"
+              variant={tab === "perfil" ? "default" : "ghost"}
+              onClick={() => setTab("perfil")}
+            >
+              Perfil
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={tab === "solicitudes" ? "default" : "ghost"}
+              onClick={() => setTab("solicitudes")}
+            >
+              Solicitudes ({solicitudes.length})
+            </Button>
+          </div>
+
+          {tab === "solicitudes" ? (
+          <section>
+            <h2 className="mb-4 font-serif text-xl text-foreground">
+              Solicitudes de contacto
+            </h2>
+            {solicitudes.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Cuando alguien te contacte desde Manos profesionales, aparecerá aquí.
+              </p>
+            ) : (
+              <ul className="space-y-4">
+                {solicitudes.map((s) => (
+                  <li
+                    key={s.id}
+                    className="rounded-xl border border-border bg-card px-4 py-4 text-sm"
+                  >
+                    <div className="flex flex-wrap justify-between gap-2">
+                      <p className="font-medium text-foreground">{s.nombre}</p>
+                      <span className="text-muted-foreground">
+                        {s.estado_label ?? s.estado ?? "pendiente"}
+                        {s.created_at
+                          ? ` · ${new Date(s.created_at).toLocaleString("es-CO")}`
+                          : ""}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-muted-foreground">
+                      {s.preferencia_contacto ?? "contacto"}: {s.celular}
+                      {s.email ? ` · ${s.email}` : ""}
+                    </p>
+                    <p className="mt-2 text-foreground/90">{s.mensaje}</p>
+                    {s.nota ? (
+                      <pre className="mt-3 whitespace-pre-wrap rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground">
+                        {s.nota}
+                      </pre>
+                    ) : null}
+                    <div className="mt-4 grid gap-3 sm:grid-cols-[12rem_1fr_auto]">
+                      <div className="space-y-1">
+                        <Label htmlFor={`est-${s.id}`}>Estado</Label>
+                        <Select
+                          value={s.estado ?? "pendiente"}
+                          onValueChange={(v) => {
+                            if (!v || busySolicitudId === s.id) return
+                            void onPatchSolicitud(s, {
+                              estado: v as EstadoSolicitudProfesional,
+                            })
+                          }}
+                          items={ESTADOS_SOLICITUD}
+                        >
+                          <SelectTrigger id={`est-${s.id}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ESTADOS_SOLICITUD.map((e) => (
+                              <SelectItem key={e.value} value={e.value}>
+                                {e.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor={`nota-${s.id}`}>Agregar nota</Label>
+                        <Textarea
+                          id={`nota-${s.id}`}
+                          rows={2}
+                          value={notaDraft[s.id] ?? ""}
+                          onChange={(e) =>
+                            setNotaDraft((prev) => ({
+                              ...prev,
+                              [s.id]: e.target.value,
+                            }))
+                          }
+                          placeholder="Se acumula con fecha en el historial"
+                          disabled={busySolicitudId === s.id}
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={
+                            busySolicitudId === s.id ||
+                            !(notaDraft[s.id]?.trim())
+                          }
+                          onClick={() =>
+                            void onPatchSolicitud(s, {
+                              nota: notaDraft[s.id]?.trim(),
+                            })
+                          }
+                        >
+                          {busySolicitudId === s.id ? "…" : "Guardar nota"}
+                        </Button>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+          ) : (
         <div className="space-y-10">
           <section className="text-sm text-muted-foreground">
             <p>
@@ -269,41 +436,8 @@ export function PanelProfesionalClient() {
               {saving ? "Guardando…" : "Guardar cambios"}
             </Button>
           </form>
-
-          <section>
-            <h2 className="mb-4 font-serif text-xl text-foreground">
-              Solicitudes de contacto
-            </h2>
-            {solicitudes.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Cuando alguien te contacte desde Manos profesionales, aparecerá aquí.
-              </p>
-            ) : (
-              <ul className="space-y-3">
-                {solicitudes.map((s) => (
-                  <li
-                    key={s.id}
-                    className="rounded-xl border border-border bg-card px-4 py-3 text-sm"
-                  >
-                    <div className="flex flex-wrap justify-between gap-2">
-                      <p className="font-medium text-foreground">{s.nombre}</p>
-                      <span className="text-muted-foreground">
-                        {s.estado ?? "pendiente"}
-                        {s.created_at
-                          ? ` · ${new Date(s.created_at).toLocaleString("es-CO")}`
-                          : ""}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-muted-foreground">
-                      {s.preferencia_contacto ?? "contacto"}: {s.celular}
-                      {s.email ? ` · ${s.email}` : ""}
-                    </p>
-                    <p className="mt-2 text-foreground/90">{s.mensaje}</p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+        </div>
+          )}
         </div>
       )}
     </DashboardShell>
