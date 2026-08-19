@@ -13,7 +13,7 @@ type Props = {
 }
 
 /**
- * Multi-select de municipios activos, agrupados por departamento.
+ * Multi-select de municipios de Colombia, agrupados por departamento.
  */
 export function MunicipiosMultiSelect({ value, onChange, className }: Props) {
   const [departamentos, setDepartamentos] = useState<ApiDepartamento[]>([])
@@ -27,11 +27,17 @@ export function MunicipiosMultiSelect({ value, onChange, className }: Props) {
       try {
         const depts = await fetchDepartamentos(false)
         if (cancelled) return
-        setDepartamentos(depts)
+        const sortedDepts = [...depts].sort((a, b) =>
+          a.nombre.localeCompare(b.nombre, "es", { sensitivity: "base" }),
+        )
+        setDepartamentos(sortedDepts)
         const entries = await Promise.all(
-          depts.map(async (d) => {
+          sortedDepts.map(async (d) => {
             const munis = await fetchMunicipios(d.id, false)
-            return [d.id, munis] as const
+            const sorted = [...munis].sort((a, b) =>
+              a.nombre.localeCompare(b.nombre, "es", { sensitivity: "base" }),
+            )
+            return [d.id, sorted] as const
           }),
         )
         if (cancelled) return
@@ -71,8 +77,8 @@ export function MunicipiosMultiSelect({ value, onChange, className }: Props) {
     <div className={cn("space-y-4", className)}>
       <Label>Municipios asignados</Label>
       <p className="text-xs text-muted-foreground">
-        Elige al menos uno. Solo aparecen departamentos activos (Risaralda,
-        Chocó, Valle del Cauca).
+        Elige al menos uno. Puedes seleccionar municipios de cualquier
+        departamento de Colombia.
       </p>
       {departamentos.map((d) => {
         const munis = byDept[d.id] ?? []

@@ -437,7 +437,10 @@ export async function fetchDepartamentos(
   server = false,
   opts?: { incluirInactivos?: boolean },
 ): Promise<ApiDepartamento[]> {
-  const q = opts?.incluirInactivos ? "?incluir_inactivos=1" : "";
+  // Producto: catálogo nacional completo (33 deptos / ~1122 municipios).
+  // `incluirInactivos: false` solo si hace falta el subset “activo” legacy.
+  const incluir = opts?.incluirInactivos !== false;
+  const q = incluir ? "?incluir_inactivos=1" : "";
   const res = await apiFetch<{ data: ApiDepartamento[] }>(
     `/api/catalogos/departamentos${q}`,
     {},
@@ -451,10 +454,11 @@ export async function fetchMunicipios(
   server = false,
   opts?: { incluirInactivos?: boolean },
 ): Promise<ApiMunicipio[]> {
+  const incluir = opts?.incluirInactivos !== false;
   const params = new URLSearchParams({
     departamento_id: String(departamentoId),
   });
-  if (opts?.incluirInactivos) params.set("incluir_inactivos", "1");
+  if (incluir) params.set("incluir_inactivos", "1");
   const res = await apiFetch<{ data: ApiMunicipio[] }>(
     `/api/catalogos/municipios?${params}`,
     {},

@@ -5,6 +5,12 @@ Sesión agente 2026-08-16 (loop 5h + trabajo previo en la misma chat).
 
 ---
 
+### [F40] Catálogo geo nacional en selects (crear/registro/etc.) — 2026-08-19
+- `fetchDepartamentos` / `fetchMunicipios` piden `incluir_inactivos=1` por defecto (33 deptos / ~1122 munis ya en BD)
+- `DepartamentoMunicipioSelect` + `MunicipiosMultiSelect`: lista completa ordenada A–Z; copy sin “solo Risaralda/Chocó/Valle”
+- Cubre crear, registro, perfil, profesional, contactar, puntos de acopio, solicitudes de rol, filtros `/convites`
+- **Depende de / pide API:** [P52] marcar todos `activo=true` en seed + prod (el front ya no filtra; el flag legacy sigue en BD)
+
 ### [F39] Estadísticas: robustez post-review F38 — 2026-08-19
 - Colores de torta por `estado` (no por índice filtrado)
 - Catch genérico limpia `usingMock` + `data` (sin charts/banner stale)

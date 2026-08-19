@@ -13,6 +13,12 @@ import { fetchDepartamentos, fetchMunicipios } from "@/lib/convites-api"
 import type { ApiDepartamento, ApiMunicipio } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
+function sortByNombreEs<T extends { nombre: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) =>
+    a.nombre.localeCompare(b.nombre, "es", { sensitivity: "base" }),
+  )
+}
+
 type Props = {
   municipioId: string
   onMunicipioChange: (municipioId: string, municipioNombre?: string) => void
@@ -27,12 +33,16 @@ type Props = {
   className?: string
   departamentoLabel?: string
   municipioLabel?: string
-  /** P33: puntos de acopio pueden usar municipios fuera del catálogo “activo” */
+  /**
+   * Por defecto true: catálogo nacional completo.
+   * false = solo el subset legacy `activo` (Risaralda/Chocó/Valle).
+   */
   incluirInactivos?: boolean
 }
 
 /**
  * Selector en cascada: departamento → municipios de ese departamento.
+ * Lista todos los departamentos/municipios de Colombia (salvo `incluirInactivos={false}`).
  */
 export function DepartamentoMunicipioSelect({
   municipioId,
@@ -44,7 +54,7 @@ export function DepartamentoMunicipioSelect({
   className,
   departamentoLabel = "Departamento",
   municipioLabel = "Municipio",
-  incluirInactivos = false,
+  incluirInactivos = true,
 }: Props) {
   const [departamentos, setDepartamentos] = useState<ApiDepartamento[]>([])
   const [municipios, setMunicipios] = useState<ApiMunicipio[]>([])
@@ -63,15 +73,7 @@ export function DepartamentoMunicipioSelect({
       setLoadingDepts(true)
       try {
         const data = await fetchDepartamentos(false, { incluirInactivos })
-        if (!cancelled) {
-          setDepartamentos(
-            incluirInactivos
-              ? [...data].sort((a, b) =>
-                  a.nombre.localeCompare(b.nombre, "es", { sensitivity: "base" }),
-                )
-              : data,
-          )
-        }
+        if (!cancelled) setDepartamentos(sortByNombreEs(data))
       } catch {
         if (!cancelled) setDepartamentos([])
       } finally {
@@ -96,15 +98,7 @@ export function DepartamentoMunicipioSelect({
         const data = await fetchMunicipios(Number(departamentoId), false, {
           incluirInactivos,
         })
-        if (!cancelled) {
-          setMunicipios(
-            incluirInactivos
-              ? [...data].sort((a, b) =>
-                  a.nombre.localeCompare(b.nombre, "es", { sensitivity: "base" }),
-                )
-              : data,
-          )
-        }
+        if (!cancelled) setMunicipios(sortByNombreEs(data))
       } catch {
         if (!cancelled) setMunicipios([])
       } finally {
