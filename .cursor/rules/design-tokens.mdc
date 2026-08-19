@@ -1,0 +1,32 @@
+---
+description: Always use generic design tokens (primary, secondary, fonts, sizes)
+alwaysApply: true
+---
+
+# Design tokens — required
+
+Single source of truth:
+
+`src/styles/design-tokens.css`
+
+Guide: `docs/DESIGN.md`.
+
+## Do
+
+- Use semantic Tailwind classes (`bg-primary`, `text-foreground`, `font-serif`,
+  `bg-warning`, …) or CSS vars like `var(--color-primary)`, `var(--font-body)`.
+- Token names are **generic**: `primary`, `secondary`, `accent`, `muted`,
+  `destructive`, `warning`, `background`, `foreground` — not brand nicknames.
+- If something is missing, add a generic token in the design file first.
+
+## Don't
+
+- Hardcode `lab()`, `oklch()`, `#hex`, `rgb()`, `hsl()` in feature components.
+- Invent brand nicknames for tokens.
+- Rebrand by editing scattered component styles — only edit `design-tokens.css`
+  (and hex mirrors in `src/lib/design-tokens.ts` + favicon assets).
+
+## Exceptions
+
+- Third-party brand colors (Google logo SVG).
+- Static favicon/apple-icon assets (hex mirrors must match the carta).

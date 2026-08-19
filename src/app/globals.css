@@ -2,11 +2,16 @@
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 
+/* Design tokens: generic semantic colors, fonts, scale.
+   Edit ONLY src/styles/design-tokens.css for rebrand. */
+@import '../styles/design-tokens.css';
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--font-fraunces), ui-serif, Georgia, serif;
+  /* Tipografía → Tailwind font-sans / font-serif */
+  --font-sans: var(--font-body);
+  --font-serif: var(--font-display);
 
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -52,61 +57,6 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
-}
-
-:root {
-  color-scheme: light;
-  --radius: 0.875rem;
-
-  /* Warm paper background, deep coffee ink */
-  --background: oklch(0.98 0.012 83);
-  --foreground: oklch(0.28 0.028 58);
-
-  --card: oklch(0.995 0.006 85);
-  --card-foreground: oklch(0.28 0.028 58);
-  --popover: oklch(0.995 0.006 85);
-  --popover-foreground: oklch(0.28 0.028 58);
-
-  /* Terracotta */
-  --primary: oklch(0.585 0.148 42);
-  --primary-foreground: oklch(0.98 0.012 83);
-
-  /* Soft warm green tint */
-  --secondary: oklch(0.93 0.03 135);
-  --secondary-foreground: oklch(0.36 0.06 148);
-
-  --muted: oklch(0.955 0.014 84);
-  --muted-foreground: oklch(0.52 0.024 62);
-
-  /* Forest green accent */
-  --accent: oklch(0.53 0.086 150);
-  --accent-foreground: oklch(0.98 0.012 83);
-
-  --destructive: oklch(0.55 0.2 27);
-
-  --success: oklch(0.53 0.086 150);
-  --success-foreground: oklch(0.98 0.012 83);
-  --warning: oklch(0.72 0.14 65);
-  --warning-foreground: oklch(0.28 0.028 58);
-
-  --border: oklch(0.9 0.016 80);
-  --input: oklch(0.9 0.016 80);
-  --ring: oklch(0.585 0.148 42);
-
-  --chart-1: oklch(0.585 0.148 42);
-  --chart-2: oklch(0.53 0.086 150);
-  --chart-3: oklch(0.72 0.14 65);
-  --chart-4: oklch(0.62 0.09 110);
-  --chart-5: oklch(0.45 0.05 55);
-
-  --sidebar: oklch(0.97 0.014 84);
-  --sidebar-foreground: oklch(0.28 0.028 58);
-  --sidebar-primary: oklch(0.585 0.148 42);
-  --sidebar-primary-foreground: oklch(0.98 0.012 83);
-  --sidebar-accent: oklch(0.93 0.03 135);
-  --sidebar-accent-foreground: oklch(0.36 0.06 148);
-  --sidebar-border: oklch(0.9 0.016 80);
-  --sidebar-ring: oklch(0.585 0.148 42);
 }
 
 @layer base {

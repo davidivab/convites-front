@@ -1,0 +1,174 @@
+/**
+ * ============================================================================
+ * DESIGN TOKENS — Convites
+ * ============================================================================
+ *
+ * Single source of truth for color, typography, radius, and type scale.
+ *
+ * How to use
+ * ----------
+ * - In UI: Tailwind/shadcn semantic classes (`bg-primary`, `text-foreground`,
+ *   `font-serif`, `rounded-xl`).
+ * - In custom CSS: `var(--color-primary)`, `var(--font-display)`, etc.
+ * - NEVER hardcode lab/oklch/hex/rgb in components. If a token is missing,
+ *   add it HERE first.
+ *
+ * Open source / rebrand
+ * ---------------------
+ * Change the visual identity by editing ONLY this file.
+ * `globals.css` only imports tokens and maps them to Tailwind.
+ *
+ * Color format: `lab()` (CIE Lab).
+ * Naming: generic semantic tokens (primary, secondary, …) — not brand nicknames.
+ * ============================================================================
+ */
+
+:root {
+  color-scheme: light;
+
+  /* ------------------------------------------------------------------ */
+  /* COLOR — generic semantic tokens                                    */
+  /* ------------------------------------------------------------------ */
+
+  --color-background: lab(97.6742% 0.0701 4.5038);
+  --color-foreground: lab(16.2683% 4.864 9.4888);
+
+  --color-card: lab(99.2% 0.04 5);
+  --color-card-foreground: var(--color-foreground);
+
+  --color-popover: var(--color-card);
+  --color-popover-foreground: var(--color-foreground);
+
+  --color-primary: lab(50.7402% 41.3778 46.2736);
+  --color-primary-foreground: var(--color-background);
+
+  --color-secondary: lab(92.2175% -7.9404 8.1156);
+  --color-secondary-foreground: lab(26.5156% -18.6798 12.6822);
+
+  --color-muted: lab(94.7764% 0.0107 5.2751);
+  --color-muted-foreground: lab(44.1733% 3.3061 8.1639);
+
+  --color-accent: lab(46.5883% -27.3139 17.0654);
+  --color-accent-foreground: var(--color-background);
+
+  --color-destructive: lab(45.0076% 62.2051 42.3745);
+  --color-destructive-foreground: var(--color-background);
+
+  --color-success: var(--color-accent);
+  --color-success-foreground: var(--color-accent-foreground);
+
+  --color-warning: lab(66.5399% 22.9216 57.7992);
+  --color-warning-foreground: var(--color-foreground);
+
+  --color-border: lab(88.3787% 0.41 5.9806);
+  --color-input: var(--color-border);
+  --color-ring: var(--color-primary);
+
+  --color-chart-1: var(--color-primary);
+  --color-chart-2: var(--color-accent);
+  --color-chart-3: var(--color-warning);
+  --color-chart-4: lab(58% -18 22);
+  --color-chart-5: lab(35% 8 12);
+
+  --color-sidebar: lab(96.2% 0.05 5);
+  --color-sidebar-foreground: var(--color-foreground);
+  --color-sidebar-primary: var(--color-primary);
+  --color-sidebar-primary-foreground: var(--color-primary-foreground);
+  --color-sidebar-accent: var(--color-secondary);
+  --color-sidebar-accent-foreground: var(--color-secondary-foreground);
+  --color-sidebar-border: var(--color-border);
+  --color-sidebar-ring: var(--color-primary);
+
+  /*
+   * Hex mirrors — for metadata, favicons and static SVG (CSS vars do not apply
+   * to linked .svg / .ico). Keep in sync when changing lab() values above.
+   * See also src/lib/design-tokens.ts
+   */
+  --color-primary-hex: #c6582a;
+  --color-primary-foreground-hex: #fcf8f0;
+  --color-background-hex: #fcf8f0;
+  --color-foreground-hex: #2c241c;
+
+  /* ------------------------------------------------------------------ */
+  /* Bridge aliases for shadcn (same values, shorter names)             */
+  /* ------------------------------------------------------------------ */
+
+  --background: var(--color-background);
+  --foreground: var(--color-foreground);
+  --card: var(--color-card);
+  --card-foreground: var(--color-card-foreground);
+  --popover: var(--color-popover);
+  --popover-foreground: var(--color-popover-foreground);
+  --primary: var(--color-primary);
+  --primary-foreground: var(--color-primary-foreground);
+  --secondary: var(--color-secondary);
+  --secondary-foreground: var(--color-secondary-foreground);
+  --muted: var(--color-muted);
+  --muted-foreground: var(--color-muted-foreground);
+  --accent: var(--color-accent);
+  --accent-foreground: var(--color-accent-foreground);
+  --destructive: var(--color-destructive);
+  --success: var(--color-success);
+  --success-foreground: var(--color-success-foreground);
+  --warning: var(--color-warning);
+  --warning-foreground: var(--color-warning-foreground);
+  --border: var(--color-border);
+  --input: var(--color-input);
+  --ring: var(--color-ring);
+  --chart-1: var(--color-chart-1);
+  --chart-2: var(--color-chart-2);
+  --chart-3: var(--color-chart-3);
+  --chart-4: var(--color-chart-4);
+  --chart-5: var(--color-chart-5);
+  --sidebar: var(--color-sidebar);
+  --sidebar-foreground: var(--color-sidebar-foreground);
+  --sidebar-primary: var(--color-sidebar-primary);
+  --sidebar-primary-foreground: var(--color-sidebar-primary-foreground);
+  --sidebar-accent: var(--color-sidebar-accent);
+  --sidebar-accent-foreground: var(--color-sidebar-accent-foreground);
+  --sidebar-border: var(--color-sidebar-border);
+  --sidebar-ring: var(--color-sidebar-ring);
+
+  /* ------------------------------------------------------------------ */
+  /* TYPOGRAPHY                                                         */
+  /* Families are loaded by Next Font in layout.tsx                     */
+  /* (--font-fraunces, --font-instrument-sans).                         */
+  /* ------------------------------------------------------------------ */
+
+  --font-display: var(--font-fraunces), ui-serif, Georgia, "Times New Roman",
+    serif;
+  --font-body: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+  --text-5xl: 3rem;
+  --text-6xl: 3.75rem;
+
+  --leading-tight: 1.15;
+  --leading-snug: 1.35;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.65;
+
+  /* ------------------------------------------------------------------ */
+  /* RADIUS & SPACING                                                   */
+  /* ------------------------------------------------------------------ */
+
+  --radius: 0.875rem;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+}

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Fraunces, Instrument_Sans } from "next/font/google";
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { GoogleAnalytics } from "@/components/analytics/google-analytics";
+import { designTokenHex } from "@/lib/design-tokens";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -24,7 +25,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   colorScheme: "light",
-  themeColor: "#f7f2e9",
+  themeColor: designTokenHex.background,
 };
 
 export default function RootLayout({

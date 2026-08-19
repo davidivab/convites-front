@@ -8,6 +8,14 @@ Frontend Next.js para Convites. Consume la API Laravel del repo `convites`.
 - `output: "standalone"` para Docker/Dokploy
 - API: Sanctum Bearer token (`NEXT_PUBLIC_API_URL`)
 
+## Diseño (colores y tipografía)
+
+**Carta única:** [`src/styles/design-tokens.css`](src/styles/design-tokens.css) — guía en [`docs/DESIGN.md`](docs/DESIGN.md).
+
+Tokens genéricos (`--color-primary`, `--color-secondary`, `--font-display`, …).
+Para rebrand o fork: edita solo ese archivo. En componentes usa `bg-primary`,
+`font-serif`, etc. — nunca hex/lab sueltos.
+
 ## Puertos locales (sin pisar otros stacks)
 
 | Servicio | Puerto |
