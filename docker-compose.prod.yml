@@ -10,6 +10,7 @@ services:
       dockerfile: Dockerfile.dokploy
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_GA_MEASUREMENT_ID: ${NEXT_PUBLIC_GA_MEASUREMENT_ID:-}
     image: ${APP_IMAGE_NAME:-convites-front}:prod
     container_name: convites-front
     restart: unless-stopped
