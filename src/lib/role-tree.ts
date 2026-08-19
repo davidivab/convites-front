@@ -102,6 +102,7 @@ export function dashboardItemsForRole(
       { href: "/admin/solicitudes-rol", label: "Solicitudes de rol" },
       { href: "/admin/convites", label: "Auditoría convites" },
       { href: "/admin/moderacion", label: "Moderación" },
+      { href: "/admin/estadisticas", label: "Estadísticas" },
       { href: "/perfil", label: "Mi perfil" },
     ]
   }
@@ -132,6 +133,7 @@ export function perfilTabsForRole(
           { href: "/admin/solicitudes-rol", label: "Solicitudes" },
           { href: "/admin/convites", label: "Convites" },
           { href: "/admin/moderacion", label: "Moderación" },
+          { href: "/admin/estadisticas", label: "Estadísticas" },
           { href: "/perfil", label: "Perfil" },
         ]
       : !user

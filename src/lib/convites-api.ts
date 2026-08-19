@@ -1013,5 +1013,46 @@ export async function rechazarSolicitudRol(
   return res.data;
 }
 
+export type ApiEstadisticasDia = { fecha: string; total: number };
+
+export type ApiEstadisticasEstado = {
+  estado:
+    | "borrador"
+    | "en_revision"
+    | "publicada"
+    | "en_curso"
+    | "cerrada"
+    | "rechazada";
+  total: number;
+};
+
+export type ApiAdminEstadisticas = {
+  start_date: string;
+  end_date: string;
+  usuarios_por_dia: ApiEstadisticasDia[];
+  convites_por_dia: ApiEstadisticasDia[];
+  convites_por_estado: ApiEstadisticasEstado[];
+  avance_global: {
+    promedio: number;
+    convites_considerados: number;
+  };
+};
+
+/** P51 — `GET /api/admin/estadisticas` */
+export async function fetchAdminEstadisticas(
+  token: string,
+  params?: { start_date?: string; end_date?: string },
+): Promise<ApiAdminEstadisticas> {
+  const qs = new URLSearchParams();
+  if (params?.start_date) qs.set("start_date", params.start_date);
+  if (params?.end_date) qs.set("end_date", params.end_date);
+  const q = qs.toString() ? `?${qs}` : "";
+  return apiFetch<ApiAdminEstadisticas>(
+    `/api/admin/estadisticas${q}`,
+    {},
+    { token },
+  );
+}
+
 // silence unused for now — used by client components via getStoredToken
 void authOpts;

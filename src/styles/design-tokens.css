@@ -88,6 +88,11 @@
   --color-primary-foreground-hex: #fcf8f0;
   --color-background-hex: #fcf8f0;
   --color-foreground-hex: #2c241c;
+  --color-chart-1-hex: #c6582a;
+  --color-chart-2-hex: #2f6b4a;
+  --color-chart-3-hex: #c4892e;
+  --color-chart-4-hex: #3d8a5a;
+  --color-chart-5-hex: #4a3a32;
 
   /* ------------------------------------------------------------------ */
   /* Bridge aliases for shadcn (same values, shorter names)             */

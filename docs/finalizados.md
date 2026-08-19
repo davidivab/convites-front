@@ -5,6 +5,12 @@ Sesión agente 2026-08-16 (loop 5h + trabajo previo en la misma chat).
 
 ---
 
+### [F38] Admin: pestaña Estadísticas (gráficos) — 2026-08-19
+- `/admin/estadisticas` + tabs/nav; `fetchAdminEstadisticas` → `GET /api/admin/estadisticas`
+- Rango `?start_date=&end_date=` en URL; 422 de rango inválido en los inputs
+- 4 charts (recharts): usuarios/día, convites/día, por estado, avance global
+- Si P51 aún no responde (404/501): mock con banner “datos de ejemplo”
+
 ### [F37] Admin: pestaña Ciudadanos (todos los registrados) — 2026-08-18
 - `/admin/ciudadanos` con `GET /api/admin/users?todos=1` (+ `q`)
 - Usuarios = solo moderador/voluntario (staff); nav + tabs actualizados

@@ -96,6 +96,7 @@ describe("dashboardItemsForRole", () => {
       "/admin/solicitudes-rol",
       "/admin/convites",
       "/admin/moderacion",
+      "/admin/estadisticas",
       "/perfil",
     ])
   })
@@ -143,6 +144,7 @@ describe("perfilTabsForRole", () => {
       "Solicitudes",
       "Convites",
       "Moderación",
+      "Estadísticas",
       "Perfil",
     ])
     expect(tabs.map((t) => t.href)).toEqual([
@@ -153,6 +155,7 @@ describe("perfilTabsForRole", () => {
       "/admin/solicitudes-rol",
       "/admin/convites",
       "/admin/moderacion",
+      "/admin/estadisticas",
       "/perfil",
     ])
   })
