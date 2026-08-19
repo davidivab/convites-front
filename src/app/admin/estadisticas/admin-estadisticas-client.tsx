@@ -36,19 +36,53 @@ const ESTADO_LABEL: Record<string, string> = {
   rechazada: "Rechazada",
 }
 
-const ESTADO_COLORS = [
-  designTokenHex.chart5,
-  designTokenHex.chart3,
-  designTokenHex.chart2,
-  designTokenHex.chart1,
-  designTokenHex.chart4,
-  designTokenHex.muted,
-] as const
+/** Stable colors keyed by estado — never by filtered pie index. */
+const ESTADO_COLORS: Record<string, string> = {
+  borrador: designTokenHex.chart5,
+  en_revision: designTokenHex.chart3,
+  publicada: designTokenHex.chart2,
+  en_curso: designTokenHex.chart1,
+  cerrada: designTokenHex.chart4,
+  rechazada: designTokenHex.muted,
+}
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+/** Same cap as P51 backend — mock must not allocate unbounded day arrays. */
+const MAX_MOCK_RANGE_DAYS = 366
 
 function isYmd(value: string | null): value is string {
   return Boolean(value && DATE_RE.test(value))
+}
+
+function todayYmd(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function addDaysYmd(ymd: string, days: number): string {
+  const ms = Date.parse(`${ymd}T12:00:00`)
+  if (!Number.isFinite(ms)) return ymd
+  return new Date(ms + days * 86_400_000).toISOString().slice(0, 10)
+}
+
+function daySpanInclusive(start: string, end: string): number {
+  const a = Date.parse(`${start}T12:00:00`)
+  const b = Date.parse(`${end}T12:00:00`)
+  if (!Number.isFinite(a) || !Number.isFinite(b) || b < a) return 0
+  return Math.floor((b - a) / 86_400_000) + 1
+}
+
+/** Clamp mock range to ≤ MAX_MOCK_RANGE_DAYS ending at `end`. */
+function clampMockRange(
+  start: string,
+  end: string,
+): { start_date: string; end_date: string } {
+  if (daySpanInclusive(start, end) <= MAX_MOCK_RANGE_DAYS) {
+    return { start_date: start, end_date: end }
+  }
+  return {
+    start_date: addDaysYmd(end, -(MAX_MOCK_RANGE_DAYS - 1)),
+    end_date: end,
+  }
 }
 
 function formatAxisDay(ymd: string): string {
@@ -77,8 +111,14 @@ function mockEstadisticas(
   start: string | null,
   end: string | null,
 ): ApiAdminEstadisticas {
-  const endDate = end && DATE_RE.test(end) ? end : "2026-08-19"
-  const startDate = start && DATE_RE.test(start) ? start : "2026-08-05"
+  const today = todayYmd()
+  const rawEnd = end && DATE_RE.test(end) ? end : today
+  const rawStart =
+    start && DATE_RE.test(start) ? start : addDaysYmd(rawEnd, -14)
+  const { start_date: startDate, end_date: endDate } = clampMockRange(
+    rawStart,
+    rawEnd,
+  )
   const days: ApiAdminEstadisticas["usuarios_por_dia"] = []
   const startMs = Date.parse(`${startDate}T12:00:00`)
   const endMs = Date.parse(`${endDate}T12:00:00`)
@@ -191,6 +231,7 @@ export function AdminEstadisticasClient() {
             apiErrorMessage(err, "El rango de fechas no es válido."),
           )
           setError(null)
+          setUsingMock(false)
           return
         }
         if (
@@ -208,6 +249,8 @@ export function AdminEstadisticasClient() {
           }
           return
         }
+        setUsingMock(false)
+        setData(null)
         setError(
           apiErrorMessage(
             err,
@@ -403,10 +446,12 @@ export function AdminEstadisticasClient() {
                       `${name} ${Math.round((percent ?? 0) * 100)}%`
                     }
                   >
-                    {estadoPie.map((entry, i) => (
+                    {estadoPie.map((entry) => (
                       <Cell
                         key={entry.estado}
-                        fill={ESTADO_COLORS[i % ESTADO_COLORS.length]}
+                        fill={
+                          ESTADO_COLORS[entry.estado] ?? designTokenHex.muted
+                        }
                       />
                     ))}
                   </Pie>

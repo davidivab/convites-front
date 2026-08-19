@@ -5,6 +5,12 @@ Sesión agente 2026-08-16 (loop 5h + trabajo previo en la misma chat).
 
 ---
 
+### [F39] Estadísticas: robustez post-review F38 — 2026-08-19
+- Colores de torta por `estado` (no por índice filtrado)
+- Catch genérico limpia `usingMock` + `data` (sin charts/banner stale)
+- Mock: tope 366 días + `hoy` dinámico (sin fecha hardcodeada)
+- Eliminado `pnpm-lock.yaml`; ignorado en `.gitignore` (CI usa `package-lock.json`)
+
 ### [F38] Admin: pestaña Estadísticas (gráficos) — 2026-08-19
 - `/admin/estadisticas` + tabs/nav; `fetchAdminEstadisticas` → `GET /api/admin/estadisticas`
 - Rango `?start_date=&end_date=` en URL; 422 de rango inválido en los inputs
