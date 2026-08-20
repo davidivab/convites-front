@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -402,14 +403,23 @@ export function ConvitesClient({
 
         {applied.seccion === "convites" ? (
           <>
-            <p className="text-sm text-muted-foreground">
-              {applied.vista === "mapa"
-                ? `${mapaPins.length} convite${mapaPins.length === 1 ? "" : "s"} en el mapa`
-                : `${meta.total} iniciativa${meta.total === 1 ? "" : "s"}`}
-              {showPager
-                ? ` · página ${meta.current_page} de ${meta.last_page}`
-                : null}
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-muted-foreground">
+                {applied.vista === "mapa"
+                  ? `${mapaPins.length} convite${mapaPins.length === 1 ? "" : "s"} en el mapa`
+                  : `${meta.total} iniciativa${meta.total === 1 ? "" : "s"}`}
+                {showPager
+                  ? ` · página ${meta.current_page} de ${meta.last_page}`
+                  : null}
+              </p>
+              <Button
+                size="sm"
+                className="shrink-0"
+                render={<Link href="/crear" />}
+              >
+                Crear mi propio convite
+              </Button>
+            </div>
 
             {applied.vista === "mapa" ? (
               <ConvitesMap pins={mapaPins} />
