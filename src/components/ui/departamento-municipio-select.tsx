@@ -10,14 +10,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { fetchDepartamentos, fetchMunicipios } from "@/lib/convites-api"
+import { sortGeoCatalog } from "@/lib/geo-sort"
 import type { ApiDepartamento, ApiMunicipio } from "@/lib/types"
 import { cn } from "@/lib/utils"
-
-function sortByNombreEs<T extends { nombre: string }>(items: T[]): T[] {
-  return [...items].sort((a, b) =>
-    a.nombre.localeCompare(b.nombre, "es", { sensitivity: "base" }),
-  )
-}
 
 type Props = {
   municipioId: string
@@ -43,6 +38,7 @@ type Props = {
 /**
  * Selector en cascada: departamento → municipios de ese departamento.
  * Lista todos los departamentos/municipios de Colombia (salvo `incluirInactivos={false}`).
+ * Orden: emergencia primero, luego alfabético.
  */
 export function DepartamentoMunicipioSelect({
   municipioId,
@@ -73,7 +69,7 @@ export function DepartamentoMunicipioSelect({
       setLoadingDepts(true)
       try {
         const data = await fetchDepartamentos(false, { incluirInactivos })
-        if (!cancelled) setDepartamentos(sortByNombreEs(data))
+        if (!cancelled) setDepartamentos(sortGeoCatalog(data))
       } catch {
         if (!cancelled) setDepartamentos([])
       } finally {
@@ -98,7 +94,7 @@ export function DepartamentoMunicipioSelect({
         const data = await fetchMunicipios(Number(departamentoId), false, {
           incluirInactivos,
         })
-        if (!cancelled) setMunicipios(sortByNombreEs(data))
+        if (!cancelled) setMunicipios(sortGeoCatalog(data))
       } catch {
         if (!cancelled) setMunicipios([])
       } finally {

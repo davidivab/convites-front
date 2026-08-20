@@ -333,7 +333,7 @@ export function RegistrarseClient() {
                   />
                 </div>
               ) : null}
-              <div className={viaGoogle ? "space-y-5" : "grid gap-5 sm:grid-cols-2"}>
+              <div className="space-y-5">
                 <PhoneInput
                   id="celular"
                   label="Celular"

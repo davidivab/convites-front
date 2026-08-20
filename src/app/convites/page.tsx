@@ -11,6 +11,7 @@ import {
   fetchMunicipios,
   type PageMeta,
 } from "@/lib/convites-api";
+import { sortGeoCatalog } from "@/lib/geo-sort";
 import type { Iniciativa } from "@/lib/data";
 import type { ApiMaterial, ApiMunicipio, ApiZona } from "@/lib/types";
 import type { GeoOption, MapaPin } from "./convites-types";
@@ -60,7 +61,7 @@ function buildGeoOptions(
       label: z.nombre,
     })),
   ];
-  for (const m of municipios) {
+  for (const m of sortGeoCatalog(municipios)) {
     if (zonaLabels.has(m.nombre.toLowerCase())) continue;
     opts.push({
       value: `municipio:${m.slug}`,

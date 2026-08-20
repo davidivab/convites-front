@@ -11,7 +11,8 @@ export type Categoria =
   | "comunitario"
   | "educacion"
   | "alimentacion"
-  | "herramientas";
+  | "herramientas"
+  | "reactivacion-economica";
 
 export type ItemNecesario = {
   id: string;
@@ -92,6 +93,7 @@ export const CATEGORIAS: Record<Categoria, string> = {
   educacion: "Educación",
   alimentacion: "Alimentación",
   herramientas: "Herramientas",
+  "reactivacion-economica": "Reactivación económica",
 };
 
 export const ESTADO_LABEL: Record<EstadoIniciativa, string> = {

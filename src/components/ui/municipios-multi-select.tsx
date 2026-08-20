@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Label } from "@/components/ui/label"
 import { fetchDepartamentos, fetchMunicipios } from "@/lib/convites-api"
+import { sortGeoCatalog } from "@/lib/geo-sort"
 import type { ApiDepartamento, ApiMunicipio } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -27,17 +28,12 @@ export function MunicipiosMultiSelect({ value, onChange, className }: Props) {
       try {
         const depts = await fetchDepartamentos(false)
         if (cancelled) return
-        const sortedDepts = [...depts].sort((a, b) =>
-          a.nombre.localeCompare(b.nombre, "es", { sensitivity: "base" }),
-        )
+        const sortedDepts = sortGeoCatalog(depts)
         setDepartamentos(sortedDepts)
         const entries = await Promise.all(
           sortedDepts.map(async (d) => {
             const munis = await fetchMunicipios(d.id, false)
-            const sorted = [...munis].sort((a, b) =>
-              a.nombre.localeCompare(b.nombre, "es", { sensitivity: "base" }),
-            )
-            return [d.id, sorted] as const
+            return [d.id, sortGeoCatalog(munis)] as const
           }),
         )
         if (cancelled) return

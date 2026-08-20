@@ -24,6 +24,8 @@ export type ApiDepartamento = {
   slug: string;
   nombre: string;
   codigo?: string | null;
+  /** Prioridad en selects (zonas en emergencia primero). */
+  emergencia?: boolean;
 };
 
 export type ApiMunicipio = {
@@ -31,6 +33,7 @@ export type ApiMunicipio = {
   departamento_id: number;
   slug: string;
   nombre: string;
+  emergencia?: boolean;
 };
 
 export type ApiCategoria = {
