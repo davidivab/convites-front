@@ -16,8 +16,10 @@ import { StatusBadge, UrgencyBadge } from "@/components/iniciativa/status-badges
 import { ItemProgressRow } from "@/components/iniciativa/item-progress-row";
 import { ExternalMoneyCallout } from "@/components/iniciativa/external-money-callout";
 import { IniciativaMapSection } from "@/components/iniciativa/iniciativa-map-section";
+import { AvancesAsideCard } from "@/components/iniciativa/avances-aside-card";
 import { CATEGORIAS, progresoTotal } from "@/lib/data";
-import { fetchIniciativa } from "@/lib/convites-api";
+import { fetchAvances, fetchIniciativa } from "@/lib/convites-api";
+import type { ApiAvance } from "@/lib/types";
 
 export default async function IniciativaPage({
   params,
@@ -31,6 +33,18 @@ export default async function IniciativaPage({
     ini = await fetchIniciativa(slug, { server: true });
   } catch {
     notFound();
+  }
+
+  let avancesPreview: ApiAvance[] = [];
+  let avancesTotal = 0;
+  if (ini.uuid) {
+    try {
+      const res = await fetchAvances(ini.uuid, { limit: 5, server: true });
+      avancesPreview = res.data ?? [];
+      avancesTotal = res.meta?.total ?? avancesPreview.length;
+    } catch {
+      // P54 aún no desplegado u otro error: ocultar card
+    }
   }
 
   const pct = ini.progreso ?? progresoTotal(ini.items);
@@ -289,6 +303,12 @@ export default async function IniciativaPage({
                   </div>
                 )}
               </div>
+
+              <AvancesAsideCard
+                slug={ini.slug}
+                avances={avancesPreview}
+                total={avancesTotal}
+              />
             </aside>
           </div>
         </div>

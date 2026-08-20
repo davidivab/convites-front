@@ -99,6 +99,8 @@ export type ApiPuntoAcopio = {
 
 export type ApiIniciativa = {
   id: number;
+  /** Identificador estable para API (avances, etc.). URLs front siguen usando slug. */
+  uuid?: string | null;
   slug: string;
   titulo: string;
   resumen: string;
@@ -302,4 +304,42 @@ export type ApiDisponibilidad = {
   id: number;
   slug: string;
   nombre: string;
+};
+
+export type ApiAvanceMedia = {
+  id: number;
+  url: string;
+  tipo: "imagen" | "video";
+  orden: number;
+  ancho?: number | null;
+  alto?: number | null;
+  duracion_segundos?: number | null;
+};
+
+export type ApiAvance = {
+  id: number;
+  slug: string;
+  titulo: string;
+  cuerpo: string | null;
+  tipo: "general" | "item";
+  iniciativa_item_id: number | null;
+  item?: { id: number; nombre: string } | null;
+  porcentaje: number | null;
+  enlace_externo: string | null;
+  notificar_aportantes?: boolean;
+  notificado_at?: string | null;
+  media: ApiAvanceMedia[];
+  autor?: { id: number; name: string } | null;
+  publicado_at: string | null;
+  created_at: string | null;
+};
+
+export type ApiAvanceList = {
+  data: ApiAvance[];
+  meta?: {
+    current_page?: number;
+    last_page?: number;
+    total?: number;
+    per_page?: number;
+  };
 };

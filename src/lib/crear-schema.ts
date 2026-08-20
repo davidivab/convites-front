@@ -67,3 +67,64 @@ export const CREAR_STEP_SCHEMAS = [
   crearStep4Schema,
   crearFormSchema,
 ] as const
+
+/**
+ * Maps a backend (Laravel) payload field name to the 0-based wizard step
+ * index that owns that field in the UI, so an API validation error can be
+ * shown on the step where the user can actually fix it.
+ *
+ * Step indices match `steps` in `crear-client.tsx`:
+ *   0 Sobre el convite · 1 Ubicación y fechas · 2 Qué se necesita ·
+ *   3 Multimedia · 4 Verificación · 5 Revisar y publicar
+ */
+export const FIELD_TO_STEP: Record<string, number> = {
+  // Step 1: Ubicación y fechas
+  zona_id: 1,
+  municipio_id: 1,
+  lugar_convite: 1,
+  lugar_exacto: 1,
+  lat: 1,
+  lng: 1,
+  fecha_convite: 1,
+  fecha_limite_aportes: 1,
+  fecha_convite_texto: 1,
+  puntos_acopio: 1,
+  // Step 2: Qué se necesita
+  items: 2,
+  // Step 3: Multimedia
+  enlaces: 3,
+  // Step 4: Verificación
+  persona_responsable: 4,
+  quien_respalda: 4,
+  telefono_contacto: 4,
+}
+
+/** Prefixes for indexed/nested field names, e.g. `items.0.nombre`. */
+const FIELD_PREFIX_TO_STEP: Array<{ prefix: string; step: number }> = [
+  { prefix: "puntos_acopio.", step: 1 },
+  { prefix: "items.", step: 2 },
+  { prefix: "enlaces.", step: 3 },
+]
+
+/** Resolves a single backend field name (e.g. `items.0.nombre`) to its owning wizard step. */
+export function fieldNameToStep(field: string): number | null {
+  if (field in FIELD_TO_STEP) return FIELD_TO_STEP[field]
+  for (const { prefix, step } of FIELD_PREFIX_TO_STEP) {
+    if (field.startsWith(prefix)) return step
+  }
+  return null
+}
+
+/**
+ * Given the raw `errors` object from a failed API call (Laravel 422 body),
+ * returns the wizard step index that owns the FIRST errored field, or
+ * `null` if unknown / not present in the map.
+ */
+export function resolveApiErrorStep(
+  errors: Record<string, string[]> | undefined | null,
+): number | null {
+  if (!errors) return null
+  const firstField = Object.keys(errors)[0]
+  if (!firstField) return null
+  return fieldNameToStep(firstField)
+}

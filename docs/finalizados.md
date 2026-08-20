@@ -5,6 +5,13 @@ Sesión agente 2026-08-16 (loop 5h + trabajo previo en la misma chat).
 
 ---
 
+### [F41] Avances de convite (UI + client API) — 2026-08-20
+- Tab **Avances** en editor compartido (`/admin/convites/[slug]`, creador, moderación)
+- Card pública bajo “Lo que falta” (últimos 5 + ver más) si hay ≥1
+- Rutas `/iniciativa/[slug]/avances` y `/iniciativa/[slug]/avances/[avanceSlug]`
+- Client API por **uuid** de iniciativa; graceful si P54 aún no responde
+- **Depende de P54** (uuid + endpoints + job notificación)
+
 ### [F40] Catálogo geo nacional en selects (crear/registro/etc.) — 2026-08-19
 - `fetchDepartamentos` / `fetchMunicipios` piden `incluir_inactivos=1` por defecto (33 deptos / ~1122 munis ya en BD)
 - `DepartamentoMunicipioSelect` + `MunicipiosMultiSelect`: lista completa ordenada A–Z; copy sin “solo Risaralda/Chocó/Valle”

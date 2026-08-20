@@ -49,6 +49,7 @@ export function mapIniciativa(api: ApiIniciativa): Iniciativa {
 
   return {
     id: String(api.id),
+    uuid: api.uuid ?? null,
     slug: api.slug,
     titulo: api.titulo,
     resumen: api.resumen,

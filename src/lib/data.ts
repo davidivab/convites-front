@@ -29,6 +29,8 @@ export type Ayudante = {
 
 export type Iniciativa = {
   id: string;
+  /** UUID API (avances). Ausente hasta P54. */
+  uuid?: string | null;
   slug: string;
   titulo: string;
   resumen: string;

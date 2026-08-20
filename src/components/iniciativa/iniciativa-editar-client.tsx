@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { AportanteRow } from "@/components/aportes/aportante-row"
+import { AvancesEditorPanel } from "@/components/iniciativa/avances-editor-panel"
 import { PortadaCrop } from "@/components/iniciativa/portada-crop"
 import { DashboardShell } from "@/components/layout/dashboard-shell"
 import { Button } from "@/components/ui/button"
@@ -56,6 +57,7 @@ type EditTab =
   | "ubicacion"
   | "items"
   | "multimedia"
+  | "avances"
   | "verificacion"
   | "aportantes"
 
@@ -573,6 +575,9 @@ export function IniciativaEditarClient({
               </TabsTrigger>
               <TabsTrigger value="multimedia" className="px-3 py-2">
                 Multimedia
+              </TabsTrigger>
+              <TabsTrigger value="avances" className="px-3 py-2">
+                Avances
               </TabsTrigger>
               <TabsTrigger value="verificacion" className="px-3 py-2">
                 Verificación
@@ -1143,6 +1148,16 @@ export function IniciativaEditarClient({
               </div>
             </TabsContent>
 
+            <TabsContent value="avances" className="pt-2">
+              {token && detalle ? (
+                <AvancesEditorPanel
+                  token={token}
+                  iniciativaUuid={detalle.uuid}
+                  items={detalle.items ?? []}
+                />
+              ) : null}
+            </TabsContent>
+
             <TabsContent
               value="verificacion"
               className="max-w-2xl space-y-5 pt-2"
@@ -1205,7 +1220,7 @@ export function IniciativaEditarClient({
             </TabsContent>
           </Tabs>
 
-          {section !== "aportantes" ? (
+          {section !== "aportantes" && section !== "avances" ? (
             <div className="flex flex-wrap items-center gap-3 border-t border-border pt-6">
               <Button
                 type="submit"

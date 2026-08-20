@@ -17,4 +17,4 @@ Cola de mejoras. Cursor ejecuta aquí; Claude puede añadir ítems para el front
 
 ## Cola
 
-_(vacío)_
+_(vacío — F41 en finalizados; bloqueado por P54 en API)_

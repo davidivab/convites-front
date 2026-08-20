@@ -2,6 +2,9 @@ import { apiFetch, getStoredTokenSafe } from "@/lib/api";
 import { mapCentro, mapIniciativa, mapProfesional } from "@/lib/mappers";
 import type {
   ApiAporte,
+  ApiAvance,
+  ApiAvanceList,
+  ApiAvanceMedia,
   ApiCategoria,
   ApiCentro,
   ApiDepartamento,
@@ -333,6 +336,124 @@ export async function deleteIniciativaGaleria(
     { token },
   );
   return res.data;
+}
+
+// ---------------------------------------------------------------------------
+// Avances (P54) — iniciativa identificada por uuid, no por slug de URL
+// ---------------------------------------------------------------------------
+
+export type AvancePayload = {
+  titulo: string;
+  cuerpo?: string | null;
+  tipo: "general" | "item";
+  iniciativa_item_id?: number | null;
+  porcentaje?: number | null;
+  enlace_externo?: string | null;
+  notificar_aportantes?: boolean;
+  publicado?: boolean;
+};
+
+export async function fetchAvances(
+  iniciativaUuid: string,
+  opts?: { limit?: number; page?: number; server?: boolean },
+): Promise<ApiAvanceList> {
+  const qs = new URLSearchParams();
+  if (opts?.limit) qs.set("limit", String(opts.limit));
+  if (opts?.page) qs.set("page", String(opts.page));
+  const q = qs.toString() ? `?${qs}` : "";
+  return apiFetch<ApiAvanceList>(
+    `/api/iniciativas/${encodeURIComponent(iniciativaUuid)}/avances${q}`,
+    {},
+    {
+      server: opts?.server,
+      revalidate: opts?.server ? 60 : undefined,
+    },
+  );
+}
+
+export async function fetchAvance(
+  iniciativaUuid: string,
+  avanceSlug: string,
+  opts?: { server?: boolean },
+): Promise<ApiAvance> {
+  const res = await apiFetch<{ data: ApiAvance }>(
+    `/api/iniciativas/${encodeURIComponent(iniciativaUuid)}/avances/${encodeURIComponent(avanceSlug)}`,
+    {},
+    {
+      server: opts?.server,
+      revalidate: opts?.server ? 60 : undefined,
+    },
+  );
+  return res.data;
+}
+
+export async function createAvance(
+  token: string,
+  iniciativaUuid: string,
+  payload: AvancePayload,
+): Promise<ApiAvance> {
+  const res = await apiFetch<{ data: ApiAvance }>(
+    `/api/iniciativas/${encodeURIComponent(iniciativaUuid)}/avances`,
+    { method: "POST", body: JSON.stringify(payload) },
+    { token },
+  );
+  return res.data;
+}
+
+export async function updateAvance(
+  token: string,
+  iniciativaUuid: string,
+  avanceId: number,
+  payload: Partial<AvancePayload>,
+): Promise<ApiAvance> {
+  const res = await apiFetch<{ data: ApiAvance }>(
+    `/api/iniciativas/${encodeURIComponent(iniciativaUuid)}/avances/${avanceId}`,
+    { method: "PATCH", body: JSON.stringify(payload) },
+    { token },
+  );
+  return res.data;
+}
+
+export async function deleteAvance(
+  token: string,
+  iniciativaUuid: string,
+  avanceId: number,
+): Promise<void> {
+  await apiFetch<void>(
+    `/api/iniciativas/${encodeURIComponent(iniciativaUuid)}/avances/${avanceId}`,
+    { method: "DELETE" },
+    { token },
+  );
+}
+
+export async function uploadAvanceMedia(
+  token: string,
+  iniciativaUuid: string,
+  avanceId: number,
+  file: Blob,
+  filename: string,
+): Promise<ApiAvanceMedia> {
+  const form = new FormData();
+  form.append("archivo", file, filename);
+  const res = await apiFetch<{ data: ApiAvanceMedia }>(
+    `/api/iniciativas/${encodeURIComponent(iniciativaUuid)}/avances/${avanceId}/media`,
+    { method: "POST", body: form },
+    { token },
+  );
+  return res.data;
+}
+
+export async function deleteAvanceMedia(
+  token: string,
+  iniciativaUuid: string,
+  avanceId: number,
+  mediaId: number,
+): Promise<void> {
+  await apiFetch<void>(
+    `/api/iniciativas/${encodeURIComponent(iniciativaUuid)}/avances/${avanceId}/media/${mediaId}`,
+    { method: "DELETE" },
+    { token },
+  );
 }
 
 /** P43: owner o moderador cierra convite publicada/en_curso */

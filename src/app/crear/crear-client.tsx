@@ -21,7 +21,7 @@ import { ExternalMoneyCallout } from "@/components/iniciativa/external-money-cal
 import { DepartamentoMunicipioSelect } from "@/components/ui/departamento-municipio-select"
 import { PhoneInput, isPhoneValid } from "@/components/ui/phone-input"
 import { HorarioSemanaGrid } from "@/components/ui/horario-semana-grid"
-import { apiErrorMessage } from "@/lib/api"
+import { ApiError, apiErrorMessage } from "@/lib/api"
 import {
   createIniciativa,
   deleteIniciativaGaleria,
@@ -38,6 +38,7 @@ import type { ApiCategoria, ApiIniciativa } from "@/lib/types"
 import {
   CREAR_STEP_SCHEMAS,
   crearFormSchema,
+  resolveApiErrorStep,
   type CrearFormValues,
 } from "@/lib/crear-schema"
 import { PortadaCrop } from "@/components/iniciativa/portada-crop"
@@ -205,6 +206,22 @@ function CrearClientInner() {
     params.set("paso", String(nextStep0 + 1))
     if (slug) params.set("slug", slug)
     router.replace(`/crear?${params.toString()}`, { scroll: false })
+  }
+
+  /**
+   * Shows a backend error and, when the failing field belongs to a step
+   * other than the one currently shown, navigates the wizard there first
+   * so the error appears next to the field the user actually needs to fix.
+   */
+  function showApiError(err: unknown, fallback: string) {
+    if (err instanceof ApiError && err.body.errors) {
+      const ownerStep = resolveApiErrorStep(err.body.errors)
+      if (ownerStep != null && ownerStep !== step) {
+        setStep(ownerStep)
+        syncUrl(ownerStep, draftSlug)
+      }
+    }
+    setError(apiErrorMessage(err, fallback))
   }
 
   function applyDraft(api: ApiIniciativa) {
@@ -428,7 +445,7 @@ function CrearClientInner() {
       setDraftVersion(created.version ?? 1)
       return { ok: true, slug: created.slug, id }
     } catch (err) {
-      setError(apiErrorMessage(err, "No pudimos guardar el borrador."))
+      showApiError(err, "No pudimos guardar el borrador.")
       return { ok: false, slug: draftSlug, id: draftId }
     } finally {
       setSavingDraft(false)
@@ -612,8 +629,12 @@ function CrearClientInner() {
 
   async function onContinue() {
     if (!validateStepOrError()) return
-    const nextPaso = Math.min(step + 2, 6)
-    const result = await persistDraft(nextPaso)
+    // wizard_paso = paso del step que se está dejando (0-based step + 1),
+    // no el destino: IniciativaPayloadRules exige los campos de un paso
+    // recién a partir de ese número, así que enviar step+2 disparaba
+    // validaciones del paso siguiente antes de que el usuario lo viera.
+    const currentPaso = Math.min(step + 1, 6)
+    const result = await persistDraft(currentPaso)
     if (!result.ok) return
     const nextStep0 = step + 1
     setStep(nextStep0)
@@ -656,7 +677,7 @@ function CrearClientInner() {
       await enviarRevision(token, result.id)
       router.push("/panel/creador")
     } catch (err) {
-      setError(apiErrorMessage(err, "No pudimos enviar el convite a revisión."))
+      showApiError(err, "No pudimos enviar el convite a revisión.")
     } finally {
       setSubmitting(false)
     }
