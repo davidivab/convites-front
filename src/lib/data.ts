@@ -19,6 +19,10 @@ export type ItemNecesario = {
   unidad: string;
   meta: number;
   aportado: number;
+  descripcion?: string | null;
+  valorUnitarioAprox?: number | null;
+  valorMetaAprox?: number | null;
+  valorAportadoAprox?: number | null;
 };
 
 export type Ayudante = {
@@ -44,6 +48,8 @@ export type Iniciativa = {
   creadorInicial: string;
   fechaConvite: string;
   fechaISO?: string;
+  /** Límite para registrar aportes (YYYY-MM-DD), si la iniciativa lo define. */
+  fechaLimiteAportesISO?: string;
   lugarConvite: string;
   lugarPublico?: string;
   lugarExacto?: string | null;
@@ -57,6 +63,15 @@ export type Iniciativa = {
     horario: string | null;
     contacto: string | null;
     ciudad: string;
+  }>;
+  proveedores?: Array<{
+    id: string;
+    nombre: string;
+    direccion: string | null;
+    ciudad: string | null;
+    correo: string | null;
+    celular: string | null;
+    instruccionesPago: string;
   }>;
   galeria?: Array<{ id: string; url: string }>;
   enlaces?: Array<{ id: string; titulo: string; url: string }>;

@@ -28,6 +28,14 @@ export const crearItemSchema = z.object({
     .string()
     .trim()
     .refine((v) => Number(v) >= 1, "Cantidad mínima 1"),
+  description: z.string().optional(),
+  valorUnitario: z
+    .string()
+    .optional()
+    .refine(
+      (v) => v === undefined || v.trim() === "" || Number(v) >= 0,
+      "El valor unitario debe ser un número mayor o igual a 0",
+    ),
 })
 
 export const crearStep3Schema = z.object({

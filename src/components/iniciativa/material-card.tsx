@@ -3,6 +3,7 @@ import { MapPin, Package } from "lucide-react"
 import { UrgencyBadge } from "@/components/iniciativa/status-badges"
 import type { ApiMaterial } from "@/lib/types"
 import { CATEGORIAS, type Categoria } from "@/lib/data"
+import { formatCOP } from "@/lib/format"
 
 function zonaLabel(m: ApiMaterial): string {
   const mun = m.iniciativa.municipio
@@ -41,6 +42,10 @@ export function MaterialCard({ material }: { material: ApiMaterial }) {
           {material.nombre}
         </h3>
 
+        {material.descripcion ? (
+          <p className="text-xs text-muted-foreground">{material.descripcion}</p>
+        ) : null}
+
         <p className="text-sm text-muted-foreground">
           Faltan{" "}
           <span className="font-semibold tabular-nums text-foreground">
@@ -52,6 +57,13 @@ export function MaterialCard({ material }: { material: ApiMaterial }) {
             · {material.cantidad_aportada}/{material.cantidad_meta}
           </span>
         </p>
+
+        {material.valor_unitario_aprox != null ? (
+          <p className="-mt-1.5 text-xs tabular-nums text-muted-foreground">
+            {formatCOP(material.valor_aportado_aprox ?? 0)} /{" "}
+            {formatCOP(material.valor_meta_aprox ?? 0)}
+          </p>
+        ) : null}
 
         <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
           <div

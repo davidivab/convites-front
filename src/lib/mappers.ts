@@ -43,6 +43,10 @@ export function mapIniciativa(api: ApiIniciativa): Iniciativa {
     unidad: item.unidad,
     meta: item.cantidad_meta,
     aportado: item.cantidad_aportada,
+    descripcion: item.descripcion ?? null,
+    valorUnitarioAprox: item.valor_unitario_aprox ?? null,
+    valorMetaAprox: item.valor_meta_aprox ?? null,
+    valorAportadoAprox: item.valor_aportado_aprox ?? null,
   }));
 
   const categoriaSlug = (api.categoria?.slug ?? "comunitario") as Categoria;
@@ -67,6 +71,7 @@ export function mapIniciativa(api: ApiIniciativa): Iniciativa {
     creadorInicial: api.creador?.inicial || (api.creador?.name?.[0] ?? "V"),
     fechaConvite: api.fecha_convite_texto || api.fecha_convite || "Por definir",
     fechaISO: api.fecha_convite ?? undefined,
+    fechaLimiteAportesISO: api.fecha_limite_aportes ?? undefined,
     lugarConvite: api.lugar_convite,
     lugarPublico: api.lugar_convite,
     lugarExacto: api.lugar_exacto,
@@ -84,6 +89,15 @@ export function mapIniciativa(api: ApiIniciativa): Iniciativa {
           ? `${p.municipio.nombre}, ${p.municipio.departamento.nombre}`
           : p.municipio.nombre
         : "Sin ciudad",
+    })),
+    proveedores: (api.proveedores ?? []).map((p) => ({
+      id: String(p.id),
+      nombre: p.nombre,
+      direccion: p.direccion,
+      ciudad: p.ciudad,
+      correo: p.correo,
+      celular: p.celular,
+      instruccionesPago: p.instrucciones_pago,
     })),
     galeria: (api.galeria ?? []).map((g) => ({
       id: String(g.id),

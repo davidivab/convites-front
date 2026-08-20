@@ -34,16 +34,20 @@ const nextConfig: NextConfig = {
         port: "8095",
         pathname: "/storage/**",
       },
-      // S3 bucket / regional host (uploads bajo /convites/…)
+      // S3 bucket / regional host. El backend guarda los uploads bajo
+      // iniciativas/{portada,galeria,avances}/… (ver IniciativaController y
+      // IniciativaAvanceController) — el patrón anterior ("/convites/**")
+      // no calzaba con ninguna ruta real y next/image rechazaba toda
+      // imagen de portada/galería alojada en S3, tumbando /convites entero.
       {
         protocol: "https",
         hostname: "ivo-genericos.s3.amazonaws.com",
-        pathname: "/convites/**",
+        pathname: "/iniciativas/**",
       },
       {
         protocol: "https",
         hostname: "ivo-genericos.s3.us-east-1.amazonaws.com",
-        pathname: "/convites/**",
+        pathname: "/iniciativas/**",
       },
     ],
   },

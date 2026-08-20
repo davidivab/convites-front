@@ -1,6 +1,7 @@
 import { Check, Hammer, Package } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { progresoItem, type ItemNecesario } from '@/lib/data'
+import { formatCOP } from '@/lib/format'
 
 export function ItemProgressRow({
   item,
@@ -25,13 +26,29 @@ export function ItemProgressRow({
           >
             <Icon className="size-4" />
           </span>
-          <span className="truncate text-sm font-medium text-foreground">{item.nombre}</span>
+          <div className="min-w-0">
+            <span className="block truncate text-sm font-medium text-foreground">
+              {item.nombre}
+            </span>
+            {item.descripcion ? (
+              <span className="block truncate text-xs text-muted-foreground">
+                {item.descripcion}
+              </span>
+            ) : null}
+          </div>
         </div>
         <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
           <span className="font-semibold text-foreground">{item.aportado}</span> / {item.meta}{' '}
           {item.unidad}
         </span>
       </div>
+      {item.valorUnitarioAprox != null ? (
+        <div className="mt-0.5 flex items-center justify-end">
+          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+            {formatCOP(item.valorAportadoAprox ?? 0)} / {formatCOP(item.valorMetaAprox ?? 0)}
+          </span>
+        </div>
+      ) : null}
       <div className="mt-2 flex items-center gap-3">
         <div
           className="h-2 w-full overflow-hidden rounded-full bg-muted"

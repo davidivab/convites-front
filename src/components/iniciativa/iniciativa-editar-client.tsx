@@ -55,6 +55,7 @@ const URGENCIAS = [
 type EditTab =
   | "sobre"
   | "ubicacion"
+  | "proveedores"
   | "items"
   | "multimedia"
   | "avances"
@@ -66,6 +67,8 @@ type ItemDraft = {
   nombre: string
   unidad: string
   cantidad: string
+  descripcion?: string
+  valorUnitario?: string
 }
 
 type EnlaceDraft = {
@@ -85,6 +88,16 @@ type PuntoDraft = {
   direccion: string
   horario: string
   contacto: string
+}
+
+type ProveedorDraft = {
+  key: string
+  nombre: string
+  direccion: string
+  ciudad: string
+  correo: string
+  celular: string
+  instruccionesPago: string
 }
 
 function toDateInput(value: string | null | undefined): string {
@@ -139,6 +152,7 @@ export function IniciativaEditarClient({
   const [fechaConvite, setFechaConvite] = useState("")
   const [fechaLimite, setFechaLimite] = useState("")
   const [puntosAcopio, setPuntosAcopio] = useState<PuntoDraft[]>([])
+  const [proveedores, setProveedores] = useState<ProveedorDraft[]>([])
   const [items, setItems] = useState<ItemDraft[]>([])
   const [portadaUrl, setPortadaUrl] = useState<string | null>(null)
   const [galeria, setGaleria] = useState<GaleriaDraft[]>([])
@@ -192,6 +206,17 @@ export function IniciativaEditarClient({
           contacto: p.contacto ?? "",
         })),
       )
+      setProveedores(
+        (d.proveedores ?? []).map((p) => ({
+          key: String(p.id),
+          nombre: p.nombre,
+          direccion: p.direccion ?? "",
+          ciudad: p.ciudad ?? "",
+          correo: p.correo ?? "",
+          celular: p.celular ?? "",
+          instruccionesPago: p.instrucciones_pago ?? "",
+        })),
+      )
       setItems(
         (d.items ?? []).length > 0
           ? (d.items ?? []).map((it) => ({
@@ -203,6 +228,11 @@ export function IniciativaEditarClient({
                 ? it.unidad
                 : "unidades",
               cantidad: String(it.cantidad_meta),
+              descripcion: it.descripcion ?? "",
+              valorUnitario:
+                it.valor_unitario_aprox != null
+                  ? String(it.valor_unitario_aprox)
+                  : "",
             }))
           : [
               {
@@ -210,6 +240,8 @@ export function IniciativaEditarClient({
                 nombre: "",
                 unidad: "unidades",
                 cantidad: "",
+                descripcion: "",
+                valorUnitario: "",
               },
             ],
       )
@@ -284,6 +316,17 @@ export function IniciativaEditarClient({
       return
     }
 
+    const incompleteProveedor = proveedores.find(
+      (p) => !p.nombre.trim() || !p.instruccionesPago.trim(),
+    )
+    if (incompleteProveedor) {
+      setError(
+        "Completa nombre e instrucciones de pago de cada proveedor, o quítalo.",
+      )
+      setSection("proveedores")
+      return
+    }
+
     const incompleteLink = enlaces.find(
       (x) =>
         (x.titulo.trim() && !x.url.trim()) ||
@@ -320,6 +363,11 @@ export function IniciativaEditarClient({
           unidad: it.unidad.trim(),
           cantidad_meta: Number(it.cantidad),
           orden: idx + 1,
+          descripcion: it.descripcion?.trim() || null,
+          valor_unitario_aprox:
+            it.valorUnitario && !isNaN(Number(it.valorUnitario))
+              ? Number(it.valorUnitario)
+              : null,
         })),
         puntos_acopio: puntosAcopio
           .filter((p) => p.municipioId && p.nombre.trim() && p.direccion.trim())
@@ -330,6 +378,16 @@ export function IniciativaEditarClient({
             horario: p.horario.trim() || null,
             contacto: p.contacto.trim() || null,
             orden: idx + 1,
+          })),
+        proveedores: proveedores
+          .filter((p) => p.nombre.trim() && p.instruccionesPago.trim())
+          .map((p) => ({
+            nombre: p.nombre.trim(),
+            direccion: p.direccion.trim() || null,
+            ciudad: p.ciudad.trim() || null,
+            correo: p.correo.trim() || null,
+            celular: p.celular.trim() || null,
+            instrucciones_pago: p.instruccionesPago.trim(),
           })),
         enlaces: enlaces
           .filter((x) => x.titulo.trim() && x.url.trim())
@@ -569,6 +627,9 @@ export function IniciativaEditarClient({
               </TabsTrigger>
               <TabsTrigger value="ubicacion" className="px-3 py-2">
                 Ubicación
+              </TabsTrigger>
+              <TabsTrigger value="proveedores" className="px-3 py-2">
+                Dónde comprar
               </TabsTrigger>
               <TabsTrigger value="items" className="px-3 py-2">
                 Qué se necesita
@@ -884,6 +945,188 @@ export function IniciativaEditarClient({
               </div>
             </TabsContent>
 
+            <TabsContent
+              value="proveedores"
+              className="max-w-3xl space-y-5 pt-2"
+            >
+              <p className="text-sm text-muted-foreground">
+                Proveedores donde la gente puede comprar directamente los
+                ítems solicitados y enviarlos o pagarlos.
+              </p>
+
+              <div className="space-y-4">
+                {proveedores.map((p, idx) => (
+                  <div
+                    key={p.key}
+                    className="space-y-4 rounded-xl border border-border bg-background p-4"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-medium text-foreground">
+                        Proveedor {idx + 1}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setProveedores((prev) =>
+                            prev.filter((x) => x.key !== p.key),
+                          )
+                        }
+                        className="rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive"
+                        aria-label={`Quitar proveedor ${idx + 1}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor={`ce-prov-nombre-${p.key}`}>
+                          Nombre
+                        </Label>
+                        <Input
+                          id={`ce-prov-nombre-${p.key}`}
+                          placeholder="Ej: Ferretería El Tornillo"
+                          value={p.nombre}
+                          onChange={(e) =>
+                            setProveedores((prev) =>
+                              prev.map((x) =>
+                                x.key === p.key
+                                  ? { ...x, nombre: e.target.value }
+                                  : x,
+                              ),
+                            )
+                          }
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`ce-prov-dir-${p.key}`}>
+                          Dirección (opcional)
+                        </Label>
+                        <Input
+                          id={`ce-prov-dir-${p.key}`}
+                          placeholder="Calle, barrio, referencia"
+                          value={p.direccion}
+                          onChange={(e) =>
+                            setProveedores((prev) =>
+                              prev.map((x) =>
+                                x.key === p.key
+                                  ? { ...x, direccion: e.target.value }
+                                  : x,
+                              ),
+                            )
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`ce-prov-ciudad-${p.key}`}>
+                          Ciudad (opcional)
+                        </Label>
+                        <Input
+                          id={`ce-prov-ciudad-${p.key}`}
+                          placeholder="Ej: Bogotá"
+                          value={p.ciudad}
+                          onChange={(e) =>
+                            setProveedores((prev) =>
+                              prev.map((x) =>
+                                x.key === p.key
+                                  ? { ...x, ciudad: e.target.value }
+                                  : x,
+                              ),
+                            )
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`ce-prov-correo-${p.key}`}>
+                          Correo (opcional)
+                        </Label>
+                        <Input
+                          id={`ce-prov-correo-${p.key}`}
+                          type="email"
+                          placeholder="contacto@proveedor.com"
+                          value={p.correo}
+                          onChange={(e) =>
+                            setProveedores((prev) =>
+                              prev.map((x) =>
+                                x.key === p.key
+                                  ? { ...x, correo: e.target.value }
+                                  : x,
+                              ),
+                            )
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`ce-prov-cel-${p.key}`}>
+                          Celular (opcional)
+                        </Label>
+                        <Input
+                          id={`ce-prov-cel-${p.key}`}
+                          placeholder="Ej: 3001234567"
+                          value={p.celular}
+                          onChange={(e) =>
+                            setProveedores((prev) =>
+                              prev.map((x) =>
+                                x.key === p.key
+                                  ? { ...x, celular: e.target.value }
+                                  : x,
+                              ),
+                            )
+                          }
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`ce-prov-pago-${p.key}`}>
+                        Instrucciones de pago
+                      </Label>
+                      <Textarea
+                        id={`ce-prov-pago-${p.key}`}
+                        placeholder="Ej: Cuenta de ahorros Bancolombia 000-000000-00, a nombre de…"
+                        value={p.instruccionesPago}
+                        onChange={(e) =>
+                          setProveedores((prev) =>
+                            prev.map((x) =>
+                              x.key === p.key
+                                ? { ...x, instruccionesPago: e.target.value }
+                                : x,
+                            ),
+                          )
+                        }
+                        required
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {proveedores.length < 20 ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() =>
+                    setProveedores((prev) => [
+                      ...prev,
+                      {
+                        key: crypto.randomUUID(),
+                        nombre: "",
+                        direccion: "",
+                        ciudad: "",
+                        correo: "",
+                        celular: "",
+                        instruccionesPago: "",
+                      },
+                    ])
+                  }
+                >
+                  <Plus className="h-4 w-4" />
+                  Agregar proveedor
+                </Button>
+              ) : null}
+            </TabsContent>
+
             <TabsContent value="items" className="max-w-3xl space-y-5 pt-2">
               <p className="text-sm text-muted-foreground">
                 Lo que se necesita en especie o en trabajo. Cada persona podrá
@@ -893,8 +1136,9 @@ export function IniciativaEditarClient({
                 {items.map((it) => (
                   <div
                     key={it.key}
-                    className="grid gap-3 rounded-lg border border-border bg-card p-4 sm:grid-cols-[1fr_140px_160px_auto] sm:items-end"
+                    className="space-y-3 rounded-lg border border-border bg-card p-4"
                   >
+                  <div className="grid gap-3 sm:grid-cols-[1fr_140px_160px_auto] sm:items-end">
                     <div className="space-y-2">
                       <Label htmlFor={`ce-item-n-${it.key}`}>
                         ¿Qué se necesita?
@@ -985,6 +1229,49 @@ export function IniciativaEditarClient({
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor={`ce-item-d-${it.key}`}>
+                      Instrucciones o detalle (opcional)
+                    </Label>
+                    <Textarea
+                      id={`ce-item-d-${it.key}`}
+                      value={it.descripcion ?? ""}
+                      onChange={(e) =>
+                        setItems((prev) =>
+                          prev.map((x) =>
+                            x.key === it.key
+                              ? { ...x, descripcion: e.target.value }
+                              : x,
+                          ),
+                        )
+                      }
+                      placeholder="Ej: marca específica, dónde conseguirlo, empaque preferido…"
+                      rows={2}
+                    />
+                  </div>
+                  <div className="space-y-2 sm:max-w-xs">
+                    <Label htmlFor={`ce-item-v-${it.key}`}>
+                      Valor aproximado por unidad, en COP (opcional)
+                    </Label>
+                    <Input
+                      id={`ce-item-v-${it.key}`}
+                      type="number"
+                      min="0"
+                      step="1000"
+                      value={it.valorUnitario ?? ""}
+                      onChange={(e) =>
+                        setItems((prev) =>
+                          prev.map((x) =>
+                            x.key === it.key
+                              ? { ...x, valorUnitario: e.target.value }
+                              : x,
+                          ),
+                        )
+                      }
+                      placeholder="Ej: 15000"
+                    />
+                  </div>
+                  </div>
                 ))}
               </div>
               <Button
@@ -999,6 +1286,8 @@ export function IniciativaEditarClient({
                       nombre: "",
                       unidad: "unidades",
                       cantidad: "",
+                      descripcion: "",
+                      valorUnitario: "",
                     },
                   ])
                 }

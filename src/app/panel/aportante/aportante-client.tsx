@@ -6,9 +6,22 @@ import { DashboardShell, StatTile } from "@/components/layout/dashboard-shell"
 import { Button } from "@/components/ui/button"
 import { useRequireRoleTree } from "@/hooks/use-require-role-tree"
 import { ApiError } from "@/lib/api"
-import { cancelarAporte, fetchMisAportes } from "@/lib/convites-api"
+import {
+  cancelarAporte,
+  eliminarEvidenciaPropia,
+  fetchMisAportes,
+  subirEvidenciaPropia,
+} from "@/lib/convites-api"
 import type { ApiAporte } from "@/lib/types"
-import { CalendarClock, HandHeart, Sprout, CheckCircle2, MapPin } from "lucide-react"
+import {
+  CalendarClock,
+  HandHeart,
+  Sprout,
+  CheckCircle2,
+  MapPin,
+  Camera,
+  Trash2,
+} from "lucide-react"
 import { VoluntarioTerritorioBanner } from "@/components/perfil/voluntario-territorio-banner"
 import { perfilTabsForRole } from "@/lib/role-tree"
 
@@ -47,6 +60,7 @@ export function PanelAportanteClient() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [cancellingId, setCancellingId] = useState<number | null>(null)
+  const [evidenciaBusyId, setEvidenciaBusyId] = useState<number | null>(null)
 
   useEffect(() => {
     if (authLoading || !token) return
@@ -98,6 +112,46 @@ export function PanelAportanteClient() {
       )
     } finally {
       setCancellingId(null)
+    }
+  }
+
+  async function onSubirEvidencia(aporteId: number, file: File) {
+    if (!token || evidenciaBusyId) return
+    setEvidenciaBusyId(aporteId)
+    setError(null)
+    try {
+      const res = await subirEvidenciaPropia(token, aporteId, file)
+      setAportes((prev) =>
+        prev.map((a) => (a.id === aporteId ? res.data : a)),
+      )
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.body.message || "No pudimos subir la evidencia."
+          : "No pudimos subir la evidencia.",
+      )
+    } finally {
+      setEvidenciaBusyId(null)
+    }
+  }
+
+  async function onQuitarEvidencia(aporteId: number) {
+    if (!token || evidenciaBusyId) return
+    setEvidenciaBusyId(aporteId)
+    setError(null)
+    try {
+      const updated = await eliminarEvidenciaPropia(token, aporteId)
+      setAportes((prev) =>
+        prev.map((a) => (a.id === aporteId ? updated : a)),
+      )
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.body.message || "No pudimos quitar la evidencia."
+          : "No pudimos quitar la evidencia.",
+      )
+    } finally {
+      setEvidenciaBusyId(null)
     }
   }
 
@@ -218,14 +272,60 @@ export function PanelAportanteClient() {
                     </Button>
                   ) : null}
                   {c.estado === "confirmado" ? (
-                    <Button
-                      variant="ghost"
-                      type="button"
-                      disabled={cancellingId === c.id}
-                      onClick={() => void onCancelar(c.id)}
-                    >
-                      {cancellingId === c.id ? "Cancelando…" : "Cancelar aporte"}
-                    </Button>
+                    <>
+                      {c.evidencia_aportante_url ? (
+                        <>
+                          <a
+                            href={c.evidencia_aportante_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-sm font-medium text-primary underline-offset-2 hover:bg-muted hover:underline"
+                          >
+                            Ver evidencia
+                          </a>
+                          <Button
+                            variant="outline"
+                            type="button"
+                            disabled={evidenciaBusyId === c.id}
+                            onClick={() => void onQuitarEvidencia(c.id)}
+                            className="gap-1"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            {evidenciaBusyId === c.id
+                              ? "Quitando…"
+                              : "Quitar evidencia"}
+                          </Button>
+                        </>
+                      ) : (
+                        <label className="inline-flex cursor-pointer items-center gap-1.5">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="sr-only"
+                            disabled={evidenciaBusyId === c.id}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0] ?? null
+                              e.target.value = ""
+                              if (file) void onSubirEvidencia(c.id, file)
+                            }}
+                          />
+                          <span className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground hover:bg-muted">
+                            <Camera className="h-3.5 w-3.5" />
+                            {evidenciaBusyId === c.id
+                              ? "Subiendo…"
+                              : "Adjuntar evidencia"}
+                          </span>
+                        </label>
+                      )}
+                      <Button
+                        variant="ghost"
+                        type="button"
+                        disabled={cancellingId === c.id}
+                        onClick={() => void onCancelar(c.id)}
+                      >
+                        {cancellingId === c.id ? "Cancelando…" : "Cancelar aporte"}
+                      </Button>
+                    </>
                   ) : null}
                 </div>
               </div>

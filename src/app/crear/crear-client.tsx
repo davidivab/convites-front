@@ -72,6 +72,8 @@ type NeededItem = {
   name: string
   unit: string
   quantity: string
+  description?: string
+  valorUnitario?: string
 }
 
 type PuntoDraft = {
@@ -83,6 +85,16 @@ type PuntoDraft = {
   direccion: string
   horario: string
   contacto: string
+}
+
+type ProveedorDraft = {
+  id: string
+  nombre: string
+  direccion: string
+  ciudad: string
+  correo: string
+  celular: string
+  instruccionesPago: string
 }
 
 type EnlaceDraft = {
@@ -178,9 +190,10 @@ function CrearClientInner() {
   const [deadline, setDeadline] = useState("")
   const [workday, setWorkday] = useState("")
   const [items, setItems] = useState<NeededItem[]>([
-    { id: "1", name: "", unit: "unidades", quantity: "" },
+    { id: "1", name: "", unit: "unidades", quantity: "", description: "", valorUnitario: "" },
   ])
   const [puntosAcopio, setPuntosAcopio] = useState<PuntoDraft[]>([])
+  const [proveedores, setProveedores] = useState<ProveedorDraft[]>([])
   const [portadaUrl, setPortadaUrl] = useState<string | null>(null)
   const [galeria, setGaleria] = useState<GaleriaDraft[]>([])
   const [enlaces, setEnlaces] = useState<EnlaceDraft[]>([])
@@ -267,8 +280,20 @@ function CrearClientInner() {
               ? it.unidad
               : "unidades",
             quantity: String(it.cantidad_meta),
+            description: it.descripcion ?? "",
+            valorUnitario:
+              it.valor_unitario_aprox != null ? String(it.valor_unitario_aprox) : "",
           }))
-        : [{ id: "1", name: "", unit: "unidades", quantity: "" }],
+        : [
+            {
+              id: "1",
+              name: "",
+              unit: "unidades",
+              quantity: "",
+              description: "",
+              valorUnitario: "",
+            },
+          ],
     )
     setPuntosAcopio(
       (api.puntos_acopio ?? []).map((p) => ({
@@ -282,6 +307,17 @@ function CrearClientInner() {
         direccion: p.direccion,
         horario: p.horario ?? "",
         contacto: p.contacto ?? "",
+      })),
+    )
+    setProveedores(
+      (api.proveedores ?? []).map((p) => ({
+        id: String(p.id),
+        nombre: p.nombre,
+        direccion: p.direccion ?? "",
+        ciudad: p.ciudad ?? "",
+        correo: p.correo ?? "",
+        celular: p.celular ?? "",
+        instruccionesPago: p.instrucciones_pago ?? "",
       })),
     )
     setResponsable(api.verificacion?.persona_responsable ?? "")
@@ -397,6 +433,11 @@ function CrearClientInner() {
         nombre: it.name.trim(),
         unidad: it.unit.trim(),
         cantidad_meta: Number(it.quantity),
+        descripcion: it.description?.trim() || null,
+        valor_unitario_aprox:
+          it.valorUnitario && !isNaN(Number(it.valorUnitario))
+            ? Number(it.valorUnitario)
+            : null,
       })),
       puntos_acopio: puntosAcopio
         .filter((p) => p.municipioId && p.nombre.trim() && p.direccion.trim())
@@ -406,6 +447,16 @@ function CrearClientInner() {
           direccion: p.direccion.trim(),
           horario: p.horario.trim() || null,
           contacto: p.contacto.trim() || null,
+        })),
+      proveedores: proveedores
+        .filter((p) => p.nombre.trim() && p.instruccionesPago.trim())
+        .map((p) => ({
+          nombre: p.nombre.trim(),
+          direccion: p.direccion.trim() || null,
+          ciudad: p.ciudad.trim() || null,
+          correo: p.correo.trim() || null,
+          celular: p.celular.trim() || null,
+          instrucciones_pago: p.instruccionesPago.trim(),
         })),
       enlaces: enlaces
         .filter((e) => e.titulo.trim() && e.url.trim())
@@ -523,7 +574,14 @@ function CrearClientInner() {
   function addItem() {
     setItems((prev) => [
       ...prev,
-      { id: crypto.randomUUID(), name: "", unit: "unidades", quantity: "" },
+      {
+        id: crypto.randomUUID(),
+        name: "",
+        unit: "unidades",
+        quantity: "",
+        description: "",
+        valorUnitario: "",
+      },
     ])
   }
 
@@ -585,12 +643,18 @@ function CrearClientInner() {
 
   async function onGaleriaFiles(files: FileList | null) {
     if (!token || !files?.length) return
+    // Capturamos los archivos ANTES de cualquier await: FileList es una
+    // lista viva ligada al <input>, y el onChange hace `e.target.value = ""`
+    // apenas termina de llamarnos (de forma síncrona). Si el primer await
+    // (ensureDraftId) cede el control antes de leer `files`, ese reset ya
+    // vació la lista y el for de abajo iteraba 0 veces sin avisar nada.
+    const fileArray = Array.from(files)
     setMediaBusy(true)
     setError(null)
     try {
       const id = await ensureDraftId()
       if (id == null) return
-      for (const file of Array.from(files)) {
+      for (const file of fileArray) {
         if (!isImageFile(file)) {
           setError("La galería solo acepta imágenes.")
           continue
@@ -662,6 +726,18 @@ function CrearClientInner() {
     if (incompletePunto) {
       setError(
         "Completa municipio, nombre y dirección de cada punto de acopio, o quítalo.",
+      )
+      return
+    }
+
+    const incompleteProveedor = proveedores.find(
+      (p) =>
+        (p.nombre.trim() && !p.instruccionesPago.trim()) ||
+        (!p.nombre.trim() && p.instruccionesPago.trim()),
+    )
+    if (incompleteProveedor) {
+      setError(
+        "Completa nombre e instrucciones de pago de cada proveedor, o quítalo.",
       )
       return
     }
@@ -1050,6 +1126,191 @@ function CrearClientInner() {
               ) : null}
             </div>
 
+            <div className="space-y-4 border-t border-border pt-6">
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  Dónde comprar{" "}
+                  <span className="font-normal text-muted-foreground">
+                    (opcional)
+                  </span>
+                </p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  Proveedores donde alguien puede comprar lo que falta y
+                  aportar así, sin necesidad de conseguir el material él
+                  mismo.
+                </p>
+              </div>
+
+              {proveedores.map((p, idx) => (
+                <div
+                  key={p.id}
+                  className="space-y-4 rounded-xl border border-border bg-background p-4"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-medium text-foreground">
+                      Proveedor {idx + 1}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setProveedores((prev) =>
+                          prev.filter((x) => x.id !== p.id),
+                        )
+                      }
+                      className="rounded-full p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive"
+                      aria-label={`Quitar proveedor ${idx + 1}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor={`proveedor-nombre-${p.id}`}>
+                      Nombre del proveedor *
+                    </Label>
+                    <Input
+                      id={`proveedor-nombre-${p.id}`}
+                      placeholder="Ej: Ferretería El Tornillo"
+                      value={p.nombre}
+                      onChange={(e) =>
+                        setProveedores((prev) =>
+                          prev.map((x) =>
+                            x.id === p.id
+                              ? { ...x, nombre: e.target.value }
+                              : x,
+                          ),
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor={`proveedor-dir-${p.id}`}>
+                        Dirección
+                      </Label>
+                      <Input
+                        id={`proveedor-dir-${p.id}`}
+                        placeholder="Calle, barrio, referencia"
+                        value={p.direccion}
+                        onChange={(e) =>
+                          setProveedores((prev) =>
+                            prev.map((x) =>
+                              x.id === p.id
+                                ? { ...x, direccion: e.target.value }
+                                : x,
+                            ),
+                          )
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`proveedor-ciudad-${p.id}`}>
+                        Ciudad
+                      </Label>
+                      <Input
+                        id={`proveedor-ciudad-${p.id}`}
+                        placeholder="Ej: Bogotá"
+                        value={p.ciudad}
+                        onChange={(e) =>
+                          setProveedores((prev) =>
+                            prev.map((x) =>
+                              x.id === p.id
+                                ? { ...x, ciudad: e.target.value }
+                                : x,
+                            ),
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor={`proveedor-correo-${p.id}`}>
+                        Correo
+                      </Label>
+                      <Input
+                        id={`proveedor-correo-${p.id}`}
+                        type="email"
+                        placeholder="contacto@proveedor.com"
+                        value={p.correo}
+                        onChange={(e) =>
+                          setProveedores((prev) =>
+                            prev.map((x) =>
+                              x.id === p.id
+                                ? { ...x, correo: e.target.value }
+                                : x,
+                            ),
+                          )
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`proveedor-cel-${p.id}`}>
+                        Celular
+                      </Label>
+                      <Input
+                        id={`proveedor-cel-${p.id}`}
+                        placeholder="Celular de contacto"
+                        value={p.celular}
+                        onChange={(e) =>
+                          setProveedores((prev) =>
+                            prev.map((x) =>
+                              x.id === p.id
+                                ? { ...x, celular: e.target.value }
+                                : x,
+                            ),
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor={`proveedor-pago-${p.id}`}>
+                      Instrucciones para pago *
+                    </Label>
+                    <Textarea
+                      id={`proveedor-pago-${p.id}`}
+                      rows={3}
+                      placeholder="Ej: Pagar en caja mencionando el nombre del convite, o transferir a la cuenta del proveedor…"
+                      value={p.instruccionesPago}
+                      onChange={(e) =>
+                        setProveedores((prev) =>
+                          prev.map((x) =>
+                            x.id === p.id
+                              ? { ...x, instruccionesPago: e.target.value }
+                              : x,
+                          ),
+                        )
+                      }
+                    />
+                  </div>
+                </div>
+              ))}
+
+              {proveedores.length < 20 ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() =>
+                    setProveedores((prev) => [
+                      ...prev,
+                      {
+                        id: crypto.randomUUID(),
+                        nombre: "",
+                        direccion: "",
+                        ciudad: "",
+                        correo: "",
+                        celular: "",
+                        instruccionesPago: "",
+                      },
+                    ])
+                  }
+                >
+                  <Plus className="mr-1.5 h-4 w-4" />
+                  Agregar proveedor
+                </Button>
+              ) : null}
+            </div>
+
             <div className="grid gap-5 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="deadline">Fecha límite para aportar</Label>
@@ -1089,67 +1350,107 @@ function CrearClientInner() {
               {items.map((it) => (
                 <div
                   key={it.id}
-                  className="grid gap-3 rounded-lg border border-border bg-background p-4 sm:grid-cols-[1fr_140px_160px_auto] sm:items-end"
+                  className="space-y-3 rounded-lg border border-border bg-background p-4"
                 >
-                  <div className="space-y-2">
-                    <Label htmlFor={`name-${it.id}`}>¿Qué se necesita?</Label>
-                    <Input
-                      id={`name-${it.id}`}
-                      placeholder="Ej: Tejas de zinc"
-                      value={it.name}
-                      onChange={(e) => updateItem(it.id, { name: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor={`qty-${it.id}`}>¿Cuántas unidades?</Label>
-                    <Input
-                      id={`qty-${it.id}`}
-                      type="number"
-                      min={1}
-                      placeholder="40"
-                      value={it.quantity}
-                      onChange={(e) =>
-                        updateItem(it.id, { quantity: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor={`unit-${it.id}`}>¿Tipo?</Label>
-                    <Select
-                      value={it.unit || "unidades"}
-                      onValueChange={(v) =>
-                        updateItem(it.id, { unit: v ?? "unidades" })
-                      }
-                      items={ITEM_UNIDAD_OPTIONS.map((o) => ({
-                        value: o.value,
-                        label: o.label,
-                      }))}
-                    >
-                      <SelectTrigger
-                        id={`unit-${it.id}`}
-                        className="mb-0 h-8 w-full"
+                  <div className="grid gap-3 sm:grid-cols-[1fr_140px_160px_auto] sm:items-end">
+                    <div className="space-y-2">
+                      <Label htmlFor={`name-${it.id}`}>¿Qué se necesita?</Label>
+                      <Input
+                        id={`name-${it.id}`}
+                        placeholder="Ej: Tejas de zinc"
+                        value={it.name}
+                        onChange={(e) => updateItem(it.id, { name: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`qty-${it.id}`}>¿Cuántas unidades?</Label>
+                      <Input
+                        id={`qty-${it.id}`}
+                        type="number"
+                        min={1}
+                        placeholder="40"
+                        value={it.quantity}
+                        onChange={(e) =>
+                          updateItem(it.id, { quantity: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`unit-${it.id}`}>¿Tipo?</Label>
+                      <Select
+                        value={it.unit || "unidades"}
+                        onValueChange={(v) =>
+                          updateItem(it.id, { unit: v ?? "unidades" })
+                        }
+                        items={ITEM_UNIDAD_OPTIONS.map((o) => ({
+                          value: o.value,
+                          label: o.label,
+                        }))}
                       >
-                        <SelectValue placeholder="Elige el tipo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ITEM_UNIDAD_OPTIONS.map((o) => (
-                          <SelectItem key={o.value} value={o.value}>
-                            {o.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                        <SelectTrigger
+                          id={`unit-${it.id}`}
+                          className="mb-0 h-8 w-full"
+                        >
+                          <SelectValue placeholder="Elige el tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ITEM_UNIDAD_OPTIONS.map((o) => (
+                            <SelectItem key={o.value} value={o.value}>
+                              {o.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Eliminar ítem"
+                      onClick={() => removeItem(it.id)}
+                      disabled={items.length === 1}
+                      className="justify-self-start text-muted-foreground hover:text-destructive sm:justify-self-auto"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Eliminar ítem"
-                    onClick={() => removeItem(it.id)}
-                    disabled={items.length === 1}
-                    className="justify-self-start text-muted-foreground hover:text-destructive sm:justify-self-auto"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="grid gap-3 sm:grid-cols-[1fr_220px]">
+                    <div className="space-y-2">
+                      <Label htmlFor={`desc-${it.id}`}>
+                        Instrucciones o detalle{" "}
+                        <span className="font-normal text-muted-foreground">
+                          (opcional)
+                        </span>
+                      </Label>
+                      <Textarea
+                        id={`desc-${it.id}`}
+                        rows={2}
+                        placeholder="Ej: marca específica, dónde conseguirlo, empaque preferido…"
+                        value={it.description ?? ""}
+                        onChange={(e) =>
+                          updateItem(it.id, { description: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor={`valor-${it.id}`}>
+                        Valor aproximado por unidad, en COP{" "}
+                        <span className="font-normal text-muted-foreground">
+                          (opcional)
+                        </span>
+                      </Label>
+                      <Input
+                        id={`valor-${it.id}`}
+                        type="number"
+                        min={0}
+                        step={1000}
+                        placeholder="Ej: 15000"
+                        value={it.valorUnitario ?? ""}
+                        onChange={(e) =>
+                          updateItem(it.id, { valorUnitario: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>

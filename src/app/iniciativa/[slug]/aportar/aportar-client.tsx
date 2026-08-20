@@ -17,6 +17,19 @@ import { cn } from "@/lib/utils";
 import { progresoItem, type Iniciativa } from "@/lib/data";
 import { crearAporte } from "@/lib/convites-api";
 import { ApiError } from "@/lib/api";
+import { formatCOP } from "@/lib/format";
+
+function formatFechaEntrega(value: string): string {
+  try {
+    return new Date(value).toLocaleDateString("es-CO", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return value;
+  }
+}
 
 export function AportarClient({ iniciativa }: { iniciativa: Iniciativa }) {
   const { user, token, loading } = useAuth();
@@ -25,6 +38,9 @@ export function AportarClient({ iniciativa }: { iniciativa: Iniciativa }) {
   const [asisto, setAsisto] = useState(true);
   const [anonimo, setAnonimo] = useState(false);
   const [puntoAcopioId, setPuntoAcopioId] = useState<string>("");
+  const [comproDeProveedor, setComproDeProveedor] = useState(false);
+  const [proveedorId, setProveedorId] = useState<string>("");
+  const [fechaEntrega, setFechaEntrega] = useState<string>("");
   const [confirmado, setConfirmado] = useState(false);
   const [mostrarCompromiso, setMostrarCompromiso] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -43,7 +59,16 @@ export function AportarClient({ iniciativa }: { iniciativa: Iniciativa }) {
   );
 
   const totalItems = seleccionados.reduce((acc, s) => acc + s.cantidad, 0);
-  const puedeConfirmar = totalItems > 0 || asisto;
+  const puedeConfirmar =
+    (totalItems > 0 || asisto) && !(comproDeProveedor && !proveedorId);
+
+  const proveedorSeleccionado = iniciativa.proveedores?.find(
+    (p) => p.id === proveedorId,
+  );
+
+  const minFechaEntrega = new Date().toISOString().slice(0, 10);
+  const maxFechaEntrega =
+    iniciativa.fechaLimiteAportesISO || iniciativa.fechaISO || undefined;
 
   function pedirConfirmacion() {
     if (!token) {
@@ -73,6 +98,10 @@ export function AportarClient({ iniciativa }: { iniciativa: Iniciativa }) {
         ...(puntoAcopioId
           ? { punto_acopio_id: Number(puntoAcopioId) }
           : {}),
+        ...(comproDeProveedor && proveedorId
+          ? { proveedor_id: Number(proveedorId) }
+          : {}),
+        ...(fechaEntrega ? { fecha_entrega: fechaEntrega } : {}),
         client_request_id:
           typeof crypto !== "undefined" && "randomUUID" in crypto
             ? crypto.randomUUID()
@@ -104,6 +133,10 @@ export function AportarClient({ iniciativa }: { iniciativa: Iniciativa }) {
         iniciativa={iniciativa}
         seleccionados={seleccionados}
         asisto={asisto}
+        fechaEntrega={fechaEntrega}
+        proveedorNombre={
+          comproDeProveedor ? proveedorSeleccionado?.nombre : undefined
+        }
       />
     );
   }
@@ -166,6 +199,11 @@ export function AportarClient({ iniciativa }: { iniciativa: Iniciativa }) {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="font-medium text-foreground">{item.nombre}</p>
+                  {item.descripcion ? (
+                    <p className="text-sm text-muted-foreground">
+                      {item.descripcion}
+                    </p>
+                  ) : null}
                   <p className="text-sm text-muted-foreground">
                     Faltan {Math.max(0, item.meta - item.aportado)} {item.unidad}{" "}
                     para la meta
@@ -220,6 +258,14 @@ export function AportarClient({ iniciativa }: { iniciativa: Iniciativa }) {
                   </span>
                 )}
               </div>
+              {activo && item.valorUnitarioAprox != null && (
+                <p className="mt-1 text-right text-xs text-muted-foreground">
+                  Aprox.{" "}
+                  <span className="font-medium text-foreground">
+                    {formatCOP(cantidad * item.valorUnitarioAprox)}
+                  </span>
+                </p>
+              )}
             </div>
           );
         })}
@@ -271,6 +317,115 @@ export function AportarClient({ iniciativa }: { iniciativa: Iniciativa }) {
           </div>
         </div>
       ) : null}
+
+      {(iniciativa.proveedores?.length ?? 0) > 0 ? (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              setComproDeProveedor((v) => {
+                const next = !v;
+                if (!next) setProveedorId("");
+                return next;
+              });
+            }}
+            aria-pressed={comproDeProveedor}
+            className={cn(
+              "mt-6 flex w-full items-center gap-3 rounded-2xl border p-4 text-left transition-colors",
+              comproDeProveedor
+                ? "border-primary/40 bg-primary/5"
+                : "border-border bg-card",
+            )}
+          >
+            <span
+              className={cn(
+                "flex size-6 shrink-0 items-center justify-center rounded-md border",
+                comproDeProveedor
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-background",
+              )}
+            >
+              {comproDeProveedor && <Check className="size-4" />}
+            </span>
+            <span>
+              <span className="block font-medium text-foreground">
+                Voy a apoyar comprando a un proveedor
+              </span>
+              <span className="block text-sm text-muted-foreground">
+                Elige el proveedor y te enviamos las instrucciones de pago.
+              </span>
+            </span>
+          </button>
+
+          {comproDeProveedor ? (
+            <div className="mt-3 rounded-2xl border border-border bg-card p-4">
+              <p className="text-sm font-medium text-foreground">
+                ¿A cuál proveedor le vas a comprar?
+              </p>
+              <div className="mt-3 space-y-2">
+                {iniciativa.proveedores!.map((p) => (
+                  <label
+                    key={p.id}
+                    className="flex cursor-pointer items-start gap-3 rounded-xl border border-border px-3 py-2.5 has-[:checked]:border-primary/50 has-[:checked]:bg-primary/5"
+                  >
+                    <input
+                      type="radio"
+                      name="proveedor"
+                      className="mt-1 accent-primary"
+                      checked={proveedorId === p.id}
+                      onChange={() => setProveedorId(p.id)}
+                    />
+                    <span className="text-sm">
+                      <span className="font-medium text-foreground">
+                        {p.nombre}
+                      </span>
+                      {p.ciudad || p.direccion ? (
+                        <span className="mt-0.5 block text-muted-foreground">
+                          {[p.ciudad, p.direccion].filter(Boolean).join(" · ")}
+                        </span>
+                      ) : null}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              {proveedorSeleccionado ? (
+                <div className="mt-3 rounded-xl border border-border bg-sidebar/60 px-4 py-3 text-sm">
+                  <p className="font-medium text-foreground">
+                    Instrucciones de pago
+                  </p>
+                  <p className="mt-1 whitespace-pre-line text-muted-foreground">
+                    {proveedorSeleccionado.instruccionesPago}
+                  </p>
+                  <p className="mt-2 text-muted-foreground">
+                    Te vamos a enviar las instrucciones también por correo.
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </>
+      ) : null}
+
+      <div className="mt-6 rounded-2xl border border-border bg-card p-4">
+        <label
+          htmlFor="fecha-entrega"
+          className="text-sm font-medium text-foreground"
+        >
+          ¿Cuándo la vas a llevar, enviar o comprar?
+        </label>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Opcional. Nos ayuda a organizar la recepción.
+        </p>
+        <input
+          id="fecha-entrega"
+          type="date"
+          value={fechaEntrega}
+          onChange={(e) => setFechaEntrega(e.target.value)}
+          min={minFechaEntrega}
+          max={maxFechaEntrega}
+          className="mt-3 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+        />
+      </div>
 
       <button
         type="button"
@@ -402,6 +557,16 @@ export function AportarClient({ iniciativa }: { iniciativa: Iniciativa }) {
                     Asistencia al convite
                   </li>
                 ) : null}
+                {fechaEntrega ? (
+                  <li className="py-1 text-foreground">
+                    Entrega: {formatFechaEntrega(fechaEntrega)}
+                  </li>
+                ) : null}
+                {comproDeProveedor && proveedorSeleccionado ? (
+                  <li className="py-1 text-foreground">
+                    Vas a comprar a: {proveedorSeleccionado.nombre}
+                  </li>
+                ) : null}
               </ul>
             )}
             <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -430,10 +595,14 @@ function Confirmacion({
   iniciativa,
   seleccionados,
   asisto,
+  fechaEntrega,
+  proveedorNombre,
 }: {
   iniciativa: Iniciativa;
   seleccionados: { item: Iniciativa["items"][number]; cantidad: number }[];
   asisto: boolean;
+  fechaEntrega: string;
+  proveedorNombre?: string;
 }) {
   return (
     <div className="mx-auto w-full max-w-xl px-4 py-14 text-center">
@@ -467,6 +636,18 @@ function Confirmacion({
             <li className="flex items-center gap-2 text-sm text-foreground">
               <Check className="size-4 text-accent" />
               Asistencia confirmada · {iniciativa.fechaConvite}
+            </li>
+          )}
+          {fechaEntrega && (
+            <li className="flex items-center gap-2 text-sm text-foreground">
+              <Check className="size-4 text-accent" />
+              Entrega: {formatFechaEntrega(fechaEntrega)}
+            </li>
+          )}
+          {proveedorNombre && (
+            <li className="flex items-center gap-2 text-sm text-foreground">
+              <Check className="size-4 text-accent" />
+              Vas a comprar a: {proveedorNombre}
             </li>
           )}
         </ul>

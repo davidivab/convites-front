@@ -246,6 +246,48 @@ export default async function IniciativaPage({
                 </section>
               ) : null}
 
+              {(ini.proveedores?.length ?? 0) > 0 ? (
+                <section className="mt-8">
+                  <h2 className="font-serif text-2xl font-semibold text-foreground">
+                    Dónde comprar
+                  </h2>
+                  <ul className="mt-4 space-y-3">
+                    {ini.proveedores!.map((p) => (
+                      <li
+                        key={p.id}
+                        className="rounded-xl border border-border bg-card p-4"
+                      >
+                        <p className="font-medium text-foreground">{p.nombre}</p>
+                        {p.ciudad ? (
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {p.ciudad}
+                          </p>
+                        ) : null}
+                        {p.direccion ? (
+                          <p className="mt-1 flex items-start gap-1.5 text-sm text-foreground">
+                            <MapPin className="mt-0.5 size-3.5 shrink-0 text-primary" />
+                            {p.direccion}
+                          </p>
+                        ) : null}
+                        {p.correo ? (
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            Correo: {p.correo}
+                          </p>
+                        ) : null}
+                        {p.celular ? (
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            Celular: {p.celular}
+                          </p>
+                        ) : null}
+                        <p className="mt-2 rounded-lg bg-secondary px-3 py-2 text-sm font-medium text-secondary-foreground">
+                          Cómo pagar: {p.instruccionesPago}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+
               {typeof ini.lat === "number" && typeof ini.lng === "number" ? (
                 <IniciativaMapSection
                   lat={ini.lat}
@@ -282,7 +324,7 @@ export default async function IniciativaPage({
                     className="h-12 w-full text-base"
                     render={<Link href={`/iniciativa/${ini.slug}/aportar`} />}
                   >
-                    Voy a llevar
+                    Me sumo llevando algo
                   </Button>
                   <Button
                     variant="secondary"
@@ -290,7 +332,7 @@ export default async function IniciativaPage({
                     className="h-11 w-full text-base"
                     render={<Link href={`/iniciativa/${ini.slug}/aportar`} />}
                   >
-                    Me sumo al convite
+                    Puedo apoyar con mi tiempo
                   </Button>
                 </div>
 

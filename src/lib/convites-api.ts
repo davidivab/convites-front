@@ -493,6 +493,9 @@ export async function crearAporte(
     nota?: string;
     anonimo?: boolean;
     punto_acopio_id?: number;
+    proveedor_id?: number;
+    /** Fecha en la que el aportante planea entregar (YYYY-MM-DD), opcional. */
+    fecha_entrega?: string;
     client_request_id?: string;
     items?: Array<{ iniciativa_item_id: number; cantidad: number }>;
   },
@@ -540,6 +543,34 @@ export async function eliminarEvidenciaAporte(
 ): Promise<ApiAporte> {
   const res = await apiFetch<{ data: ApiAporte }>(
     `/api/aportes/${aporteId}/evidencia`,
+    { method: "DELETE" },
+    { token },
+  );
+  return res.data;
+}
+
+/** El aportante sube su propia evidencia de entrega (distinta a la del organizador). */
+export async function subirEvidenciaPropia(
+  token: string,
+  aporteId: number,
+  file: Blob,
+) {
+  const form = new FormData();
+  form.append("evidencia", file);
+  return apiFetch<{ data: ApiAporte }>(
+    `/api/aportes/${aporteId}/evidencia-propia`,
+    { method: "POST", body: form },
+    { token },
+  );
+}
+
+/** El aportante elimina su propia evidencia de entrega. */
+export async function eliminarEvidenciaPropia(
+  token: string,
+  aporteId: number,
+): Promise<ApiAporte> {
+  const res = await apiFetch<{ data: ApiAporte }>(
+    `/api/aportes/${aporteId}/evidencia-propia`,
     { method: "DELETE" },
     { token },
   );

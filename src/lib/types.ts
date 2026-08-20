@@ -49,6 +49,10 @@ export type ApiIniciativaItem = {
   faltante: number;
   progreso: number;
   orden: number;
+  descripcion: string | null;
+  valor_unitario_aprox: number | null;
+  valor_meta_aprox: number | null;
+  valor_aportado_aprox: number | null;
 };
 
 /** Ítem pendiente en búsqueda inversa (GET /api/materiales). */
@@ -60,6 +64,10 @@ export type ApiMaterial = {
   cantidad_aportada: number;
   faltante: number;
   progreso: number;
+  descripcion: string | null;
+  valor_unitario_aprox: number | null;
+  valor_meta_aprox: number | null;
+  valor_aportado_aprox: number | null;
   iniciativa: {
     id: number;
     slug: string;
@@ -95,6 +103,18 @@ export type ApiPuntoAcopio = {
     nombre: string;
     departamento?: { id: number; slug: string; nombre: string } | null;
   } | null;
+};
+
+/** Proveedor recomendado para compras de la iniciativa */
+export type ApiProveedor = {
+  id: number;
+  nombre: string;
+  direccion: string | null;
+  ciudad: string | null;
+  correo: string | null;
+  celular: string | null;
+  instrucciones_pago: string;
+  orden: number;
 };
 
 export type ApiIniciativa = {
@@ -134,6 +154,7 @@ export type ApiIniciativa = {
   enlace_externo: { plataforma: string; url: string } | null;
   items: ApiIniciativaItem[];
   puntos_acopio?: ApiPuntoAcopio[];
+  proveedores?: ApiProveedor[];
   galeria?: Array<{
     id: number;
     url: string;
@@ -186,11 +207,22 @@ export type ApiAporte = {
     direccion?: string | null;
     municipio?: { id: number; nombre: string; slug?: string } | null;
   } | null;
+  proveedor_id?: number | null;
+  proveedor?: {
+    id: number;
+    nombre: string;
+    direccion: string | null;
+    ciudad: string | null;
+    correo: string | null;
+    celular: string | null;
+    instrucciones_pago: string;
+  } | null;
   evidencia?: {
     url: string;
     nombre: string | null;
     mime: string | null;
   } | null;
+  evidencia_aportante_url?: string | null;
   iniciativa: {
     id: number;
     slug: string;
