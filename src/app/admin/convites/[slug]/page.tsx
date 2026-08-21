@@ -1,10 +1,16 @@
 import type { Metadata } from "next"
-import { AdminConviteDetalleClient } from "./admin-convite-detalle-client"
+import { redirect } from "next/navigation"
 
 export const metadata: Metadata = {
   title: "Detalle convite | Admin",
 }
 
-export default function AdminConviteDetallePage() {
-  return <AdminConviteDetalleClient />
+/** Sin pestaña → /info (URL canónica por sección). */
+export default async function AdminConviteDetalleIndexPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}) {
+  const { slug } = await params
+  redirect(`/admin/convites/${slug}/info`)
 }

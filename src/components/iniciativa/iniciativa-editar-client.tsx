@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { AportanteRow } from "@/components/aportes/aportante-row"
+import { AdminInvolucradosPanel } from "@/components/admin/admin-involucrados-panel"
 import { AvancesEditorPanel } from "@/components/iniciativa/avances-editor-panel"
 import { PortadaCrop } from "@/components/iniciativa/portada-crop"
 import { DashboardShell } from "@/components/layout/dashboard-shell"
@@ -27,6 +28,8 @@ import { ApiError } from "@/lib/api"
 import {
   cerrarIniciativa,
   deleteIniciativaGaleria,
+  fetchAdminIniciativa,
+  fetchAdminIniciativaAportes,
   fetchAportantes,
   fetchCatalogos,
   fetchIniciativaApi,
@@ -35,6 +38,8 @@ import {
   updateIniciativa,
   uploadIniciativaGaleria,
   uploadIniciativaPortada,
+  type ApiAdminCreador,
+  type ApiAdminIniciativaDetalle,
 } from "@/lib/convites-api"
 import { isImageFile, resizeImageFile } from "@/lib/image-resize"
 import {
@@ -49,6 +54,13 @@ import {
   resolvePrimaryRole,
   type RoleTree,
 } from "@/lib/role-tree"
+import {
+  isAdminOnlyTab,
+  slugFromTabId,
+  tabIdFromSlug,
+  type EditTabId,
+  type EditTabSlug,
+} from "@/lib/edit-tab-slugs"
 import { useAdminPerfilTabs } from "@/components/admin/use-admin-perfil-tabs"
 import { ITEM_UNIDAD_OPTIONS, ITEM_UNIDAD_VALUES } from "@/lib/item-unidades"
 import { ImagePlus, Link2, Plus, Trash2, Video } from "lucide-react"
@@ -59,15 +71,7 @@ const URGENCIAS = [
   { value: "baja", label: "Sin prisa" },
 ] as const
 
-type EditTab =
-  | "sobre"
-  | "ubicacion"
-  | "proveedores"
-  | "items"
-  | "multimedia"
-  | "avances"
-  | "verificacion"
-  | "aportantes"
+type EditTab = EditTabId
 
 type ItemDraft = {
   key: string
@@ -123,18 +127,26 @@ export function IniciativaEditarClient({
   pathPrefix = "/panel/creador",
   /** Admin usa /admin/convites/[slug] sin /editar. */
   useEditarSuffix = true,
+  /** Si viene (admin), la pestaña activa vive en la URL `…/[tab]`. */
+  urlTabSlug,
 }: {
   allowedRoles?: RoleTree[]
   backHref?: string
   pathPrefix?: string
   useEditarSuffix?: boolean
+  urlTabSlug?: EditTabSlug
 }) {
   const params = useParams<{ slug: string }>()
   const slug = params.slug
   const router = useRouter()
+  const tabsInUrl = Boolean(urlTabSlug)
+  const initialTab = tabIdFromSlug(urlTabSlug)
   const routePath = useEditarSuffix
     ? `${pathPrefix}/${slug}/editar`
-    : `${pathPrefix}/${slug}`
+    : tabsInUrl
+      ? `${pathPrefix}/${slug}/${slugFromTabId(initialTab)}`
+      : `${pathPrefix}/${slug}`
+  const isAdminPath = pathPrefix.startsWith("/admin")
   const { user, token, loading: authLoading, hasPermission } = useRequireRoleTree(
     routePath,
     allowedRoles,
@@ -146,7 +158,8 @@ export function IniciativaEditarClient({
     routePath,
   )
 
-  const [section, setSection] = useState<EditTab>("sobre")
+  const [section, setSection] = useState<EditTab>(initialTab)
+  const [creadorAdmin, setCreadorAdmin] = useState<ApiAdminCreador | null>(null)
   const [detalle, setDetalle] = useState<ApiIniciativa | null>(null)
   const [categorias, setCategorias] = useState<ApiCategoria[]>([])
   const [aportes, setAportes] = useState<ApiAporte[]>([])
@@ -186,10 +199,17 @@ export function IniciativaEditarClient({
     setError(null)
     try {
       const [d, cats] = await Promise.all([
-        fetchIniciativaApi(slug, token),
+        isAdminPath
+          ? fetchAdminIniciativa(token, slug)
+          : fetchIniciativaApi(slug, token),
         fetchCatalogos(false),
       ])
       setDetalle(d)
+      if (isAdminPath) {
+        setCreadorAdmin((d as ApiAdminIniciativaDetalle).creador ?? null)
+      } else {
+        setCreadorAdmin(null)
+      }
       setCategorias(cats.categorias)
       setTitulo(d.titulo ?? "")
       setResumen(d.resumen ?? "")
@@ -285,13 +305,16 @@ export function IniciativaEditarClient({
       setVersion(d.version ?? 1)
 
       try {
-        const list = await fetchAportantes(token, d.id)
+        const list = isAdminPath
+          ? await fetchAdminIniciativaAportes(token, slug)
+          : await fetchAportantes(token, d.id)
         setAportes(list)
       } catch {
         setAportes([])
       }
     } catch (err) {
       setDetalle(null)
+      setCreadorAdmin(null)
       setError(
         err instanceof ApiError
           ? err.body.message || "No pudimos cargar el convite."
@@ -300,7 +323,7 @@ export function IniciativaEditarClient({
     } finally {
       setLoading(false)
     }
-  }, [token, slug])
+  }, [token, slug, isAdminPath])
 
   useEffect(() => {
     if (authLoading || !token) {
@@ -309,6 +332,23 @@ export function IniciativaEditarClient({
     }
     void load()
   }, [authLoading, token, load])
+
+  useEffect(() => {
+    if (!tabsInUrl || !urlTabSlug) return
+    const next = tabIdFromSlug(urlTabSlug)
+    if (isAdminOnlyTab(next) && !isAdminPath) return
+    setSection(next)
+  }, [tabsInUrl, urlTabSlug, isAdminPath])
+
+  function goToSection(tab: EditTab) {
+    if (isAdminOnlyTab(tab) && !isAdminPath) return
+    setSection(tab)
+    if (tabsInUrl && slug) {
+      router.replace(`${pathPrefix}/${slug}/${slugFromTabId(tab)}`, {
+        scroll: false,
+      })
+    }
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -326,7 +366,7 @@ export function IniciativaEditarClient({
     )
     if (validItems.length === 0) {
       setError("Agrega al menos un ítem con cantidad.")
-      setSection("items")
+      goToSection("items")
       return
     }
 
@@ -337,7 +377,7 @@ export function IniciativaEditarClient({
       setError(
         "Completa municipio, nombre y dirección de cada punto de acopio, o quítalo.",
       )
-      setSection("ubicacion")
+      goToSection("ubicacion")
       return
     }
 
@@ -348,7 +388,7 @@ export function IniciativaEditarClient({
       setError(
         "Completa nombre e instrucciones de pago de cada proveedor, o quítalo.",
       )
-      setSection("proveedores")
+      goToSection("proveedores")
       return
     }
 
@@ -359,7 +399,7 @@ export function IniciativaEditarClient({
     )
     if (incompleteLink) {
       setError("Completa título y URL de cada enlace, o quítalo.")
-      setSection("multimedia")
+      goToSection("multimedia")
       return
     }
 
@@ -691,7 +731,7 @@ export function IniciativaEditarClient({
         <form onSubmit={(e) => void onSubmit(e)} className="space-y-6">
           <Tabs
             value={section}
-            onValueChange={(v) => setSection((v as EditTab) || "sobre")}
+            onValueChange={(v) => goToSection((v as EditTab) || "sobre")}
             className="gap-4"
           >
             <TabsList
@@ -722,6 +762,11 @@ export function IniciativaEditarClient({
               <TabsTrigger value="aportantes" className="px-3 py-2">
                 Aportantes ({aportes.length})
               </TabsTrigger>
+              {isAdminPath ? (
+                <TabsTrigger value="involucrados" className="px-3 py-2">
+                  Involucrados
+                </TabsTrigger>
+              ) : null}
             </TabsList>
 
             <TabsContent value="sobre" className="max-w-2xl space-y-5 pt-2">
@@ -1609,9 +1654,34 @@ export function IniciativaEditarClient({
                 </ul>
               )}
             </TabsContent>
+
+            {isAdminPath && token && slug ? (
+              <TabsContent value="involucrados" className="pt-2">
+                <AdminInvolucradosPanel
+                  token={token}
+                  slug={slug}
+                  creador={creadorAdmin}
+                  onCreadorChange={(updated) => {
+                    setCreadorAdmin(updated.creador ?? null)
+                    setDetalle((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            ...updated,
+                            version: updated.version ?? prev.version,
+                          }
+                        : updated,
+                    )
+                    setVersion(updated.version ?? version)
+                  }}
+                />
+              </TabsContent>
+            ) : null}
           </Tabs>
 
-          {section !== "aportantes" && section !== "avances" ? (
+          {section !== "aportantes" &&
+          section !== "avances" &&
+          section !== "involucrados" ? (
             <div className="flex flex-wrap items-center gap-3 border-t border-border pt-6">
               <Button
                 type="submit"

@@ -882,7 +882,27 @@ export async function syncAdminUserMunicipios(
   );
 }
 
-export type ApiAdminIniciativaDetalle = ApiIniciativa & {
+export type ApiAdminCreador = {
+  id: number;
+  name: string;
+  inicial: string | null;
+  email?: string | null;
+  celular?: string | null;
+  barrio?: string | null;
+  municipio?: {
+    id: number;
+    nombre: string;
+    slug: string;
+    departamento?: {
+      id: number;
+      nombre: string;
+      slug: string;
+    } | null;
+  } | null;
+};
+
+export type ApiAdminIniciativaDetalle = Omit<ApiIniciativa, "creador"> & {
+  creador: ApiAdminCreador | null;
   verificacion?: {
     persona_responsable: string | null;
     quien_respalda: string | null;
@@ -956,6 +976,20 @@ export async function fetchAdminIniciativaAportes(
     { token },
   );
   return res.data ?? [];
+}
+
+/** Admin: reasigna el creador del convite por correo del ciudadano. */
+export async function asignarAdminCreador(
+  token: string,
+  slug: string,
+  email: string,
+): Promise<ApiAdminIniciativaDetalle> {
+  const res = await apiFetch<{ data: ApiAdminIniciativaDetalle }>(
+    `/api/admin/iniciativas/${encodeURIComponent(slug)}/asignar-creador`,
+    { method: "POST", body: JSON.stringify({ email }) },
+    { token },
+  );
+  return res.data;
 }
 
 export type ApiNotification = {

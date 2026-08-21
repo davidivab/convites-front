@@ -5,12 +5,12 @@ export const metadata: Metadata = {
   title: "Editar convite | Admin",
 }
 
-/** La edición vive en /admin/convites/[slug] (mismo editor que el creador). */
+/** Legacy /editar → pestaña info. */
 export default async function AdminConviteEditarPage({
   params,
 }: {
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  redirect(`/admin/convites/${slug}`)
+  redirect(`/admin/convites/${slug}/info`)
 }
