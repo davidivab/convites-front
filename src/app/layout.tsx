@@ -20,7 +20,7 @@ const instrumentSans = Instrument_Sans({
 export const metadata: Metadata = {
   title: "Convites — Plataforma ciudadana de convites comunitarios",
   description:
-    "Convites es una plataforma ciudadana de convites comunitarios en las zonas afectadas de Risaralda. No somos fundación ni empresa: somos vecinos organizándonos.",
+    "Convites es una plataforma ciudadana de convites comunitarios en las zonas afectadas de Colombia. No somos fundación ni empresa: somos vecinos organizándonos.",
 };
 
 export const viewport: Viewport = {

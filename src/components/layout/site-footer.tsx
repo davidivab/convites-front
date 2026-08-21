@@ -27,7 +27,7 @@ export function SiteFooter() {
         <div className="max-w-xs">
           <Wordmark />
           <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-            Plataforma ciudadana de convites en las zonas afectadas de Risaralda.
+            Plataforma ciudadana de convites en las zonas afectadas de Colombia.
             No somos fundación ni empresa.
           </p>
         </div>
@@ -52,7 +52,7 @@ export function SiteFooter() {
       </div>
       <div className="border-t border-border">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-1 px-4 py-5 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} Convites · convites.co · Risaralda, Colombia</p>
+          <p>© {new Date().getFullYear()} Convites · convites.co · Hecha con amor por ciudadanos de Colombia</p>
           <p>Convites no recibe ni administra dinero.</p>
         </div>
       </div>

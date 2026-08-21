@@ -21,7 +21,7 @@ export type { GeoOption, MapaPin } from "./convites-types";
 export const metadata = {
   title: "Ver convites — Convites",
   description:
-    "Iniciativas comunitarias abiertas en las zonas afectadas de Risaralda.",
+    "Iniciativas comunitarias abiertas en las zonas afectadas de Colombia.",
 };
 
 const PER_PAGE = 12;

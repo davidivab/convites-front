@@ -40,7 +40,7 @@ export default async function HomePage() {
           <div className="absolute inset-0 -z-10">
             <Image
               src="/images/hero-convite.png"
-              alt="Vecinos de Risaralda reunidos en un convite comunitario reconstruyendo una casa juntos"
+              alt="Vecinos de Colombia reunidos en un convite comunitario reconstruyendo una casa juntos"
               fill
               priority
               sizes="100vw"
@@ -64,7 +64,7 @@ export default async function HomePage() {
               </h1>
 
               <p className="mt-5 max-w-xl text-base leading-relaxed text-background/85 md:text-lg">
-                Vecinos organizando convites en las zonas afectadas de Risaralda.
+                Vecinos organizando convites en las zonas afectadas de Colombia.
                 No somos fundación ni empresa.
               </p>
 

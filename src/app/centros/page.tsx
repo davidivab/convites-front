@@ -8,7 +8,7 @@ import { CentrosClient } from "./centros-client"
 export const metadata: Metadata = {
   title: "Lugares de ayuda — Convites",
   description:
-    "Directorio de lugares de ayuda: acopio, albergues, hospitales, bomberos y líneas de emergencia en Risaralda.",
+    "Directorio de lugares de ayuda: acopio, albergues, hospitales, bomberos y líneas de emergencia en Colombia.",
 }
 
 export const revalidate = 120

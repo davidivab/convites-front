@@ -64,7 +64,7 @@ export default function QuienesSomosPage() {
           <div className="overflow-hidden rounded-2xl border border-border">
             <Image
               src="/images/hero-convite.png"
-              alt="Vecinos de una vereda de Risaralda trabajando juntos en la reconstrucción de una casa durante un convite"
+              alt="Vecinos de una vereda de Colombia trabajando juntos en la reconstrucción de una casa durante un convite"
               width={1200}
               height={600}
               className="h-auto w-full object-cover"

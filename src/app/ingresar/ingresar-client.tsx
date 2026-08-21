@@ -33,7 +33,7 @@ const DEMO_ACCOUNTS: {
   {
     email: "moderator@convites.test",
     rol: "moderator",
-    para: "Moderar y editar convites (Risaralda) en /moderacion",
+    para: "Moderar y editar convites (Colombia) en /moderacion",
   },
   {
     email: "voluntario@convites.test",
