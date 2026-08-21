@@ -569,7 +569,7 @@ export function IniciativaEditarClient({
       return
     }
     if (file.size > MAX_VIDEO_BYTES) {
-      setError("El video no puede superar 50MB.")
+      setError("El video no puede superar 100MB.")
       return
     }
     setMediaBusy(true)
@@ -1384,7 +1384,7 @@ export function IniciativaEditarClient({
                 <Label>Galería multimedia</Label>
                 <p className="text-sm text-muted-foreground">
                   Fotos: máximo 2000×2000 px, sin deformar. Videos: máximo 2
-                  minutos y 50MB. Hasta 12 archivos en total.
+                  minutos y 100MB. Hasta 12 archivos en total.
                 </p>
                 {galeria.length > 0 ? (
                   <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">

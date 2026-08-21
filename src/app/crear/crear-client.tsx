@@ -697,7 +697,7 @@ function CrearClientInner() {
       return
     }
     if (file.size > MAX_VIDEO_BYTES) {
-      setError("El video no puede superar 50MB.")
+      setError("El video no puede superar 100MB.")
       return
     }
     setMediaBusy(true)
@@ -1532,7 +1532,7 @@ function CrearClientInner() {
               <p className="text-sm text-muted-foreground">
                 Puedes subir fotos y videos. Las fotos se reducen
                 automáticamente a máximo 2000×2000 px sin deformarlas; los
-                videos deben durar máximo 2 minutos y pesar hasta 50MB.
+                videos deben durar máximo 2 minutos y pesar hasta 100MB.
               </p>
               {galeria.length > 0 ? (
                 <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">

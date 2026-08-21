@@ -6,7 +6,7 @@
  */
 
 export const MAX_VIDEO_SECONDS = 120
-export const MAX_VIDEO_BYTES = 50 * 1024 * 1024
+export const MAX_VIDEO_BYTES = 100 * 1024 * 1024
 
 export function isVideoFile(file: File): boolean {
   return file.type.startsWith("video/")
