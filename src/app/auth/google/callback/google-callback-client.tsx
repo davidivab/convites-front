@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { BrandMark } from "@/components/layout/brand-mark"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/components/auth/auth-provider"
 import { ApiError } from "@/lib/api"
+import { consumeAuthNext, peekAuthNext } from "@/lib/auth-next"
 import { homeForRole, resolvePrimaryRole } from "@/lib/role-tree"
 
 export function GoogleCallbackClient() {
@@ -31,7 +31,10 @@ export function GoogleCallbackClient() {
       } catch {
         // ignore
       }
-      router.replace(`/registrarse?google_code=${encodeURIComponent(code)}`)
+      const next = peekAuthNext()
+      const qs = new URLSearchParams({ google_code: code })
+      if (next) qs.set("next", next)
+      router.replace(`/registrarse?${qs.toString()}`)
       return
     }
 
@@ -45,7 +48,13 @@ export function GoogleCallbackClient() {
         } catch {
           // ignore
         }
-        // Cuenta a medias: entrar autenticado y terminar en /perfil.
+        // Si venía de aportar/unirse, vuelve ahí (no fuerces onboarding).
+        const next = consumeAuthNext("")
+        if (next) {
+          router.replace(next)
+          return
+        }
+        // Sin destino: onboarding suave solo si hace falta.
         if (resumeOnboarding || user.needs_onboarding) {
           router.replace("/perfil?onboarding=1")
           return
@@ -70,7 +79,6 @@ export function GoogleCallbackClient() {
   if (error) {
     return (
       <div className="mx-auto flex min-h-[50vh] max-w-sm flex-col justify-center px-6 py-16">
-        <BrandMark className="mb-6" />
         <h1 className="font-serif text-2xl text-foreground">No se pudo entrar</h1>
         <p className="mt-2 text-sm text-destructive">{error}</p>
         <Button className="mt-6" render={<Link href="/ingresar" />}>

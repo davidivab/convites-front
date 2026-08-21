@@ -1,10 +1,6 @@
-import type { Metadata } from "next"
-import { AdminSolicitudesRolClient } from "./admin-solicitudes-rol-client"
+import { redirect } from "next/navigation"
 
-export const metadata: Metadata = {
-  title: "Solicitudes de rol — Admin Convites",
-}
-
-export default function Page() {
-  return <AdminSolicitudesRolClient />
+/** Unificado en /admin/usuarios?tipo=pendientes (F42). */
+export default function AdminSolicitudesRolRedirectPage() {
+  redirect("/admin/usuarios?tipo=pendientes")
 }

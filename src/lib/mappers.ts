@@ -101,7 +101,11 @@ export function mapIniciativa(api: ApiIniciativa): Iniciativa {
     })),
     galeria: (api.galeria ?? []).map((g) => ({
       id: String(g.id),
+      tipo: g.tipo,
       url: g.url,
+      ancho: g.ancho ?? null,
+      alto: g.alto ?? null,
+      duracionSegundos: g.duracion_segundos ?? null,
     })),
     enlaces: (api.enlaces ?? []).map((e) => ({
       id: String(e.id),

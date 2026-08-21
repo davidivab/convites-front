@@ -120,6 +120,18 @@ export type ApiProveedor = {
   orden: number;
 };
 
+/** Item de la galería multimedia de una iniciativa (foto o video). */
+export type ApiGaleriaItem = {
+  id: number;
+  tipo: "imagen" | "video";
+  url: string;
+  orden: number;
+  ancho?: number | null;
+  alto?: number | null;
+  /** Solo presente cuando tipo === "video". */
+  duracion_segundos?: number | null;
+};
+
 export type ApiIniciativa = {
   id: number;
   /** Identificador estable para API (avances, etc.). URLs front siguen usando slug. */
@@ -158,13 +170,7 @@ export type ApiIniciativa = {
   items: ApiIniciativaItem[];
   puntos_acopio?: ApiPuntoAcopio[];
   proveedores?: ApiProveedor[];
-  galeria?: Array<{
-    id: number;
-    url: string;
-    orden: number;
-    ancho?: number | null;
-    alto?: number | null;
-  }>;
+  galeria?: ApiGaleriaItem[];
   enlaces?: Array<{
     id: number;
     titulo: string;
@@ -203,6 +209,8 @@ export type ApiAporte = {
     id: number | null;
     name: string;
     inicial: string | null;
+    email?: string | null;
+    celular?: string | null;
   } | null;
   punto_acopio?: {
     id: number;

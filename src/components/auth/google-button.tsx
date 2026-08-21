@@ -51,6 +51,16 @@ export function GoogleButton({
       } catch {
         // ignore
       }
+      // Conserva ?next= de la URL actual para el callback de Google.
+      try {
+        const next = new URLSearchParams(window.location.search).get("next")
+        if (next) {
+          const { rememberAuthNext, safeNextPath } = await import("@/lib/auth-next")
+          rememberAuthNext(safeNextPath(next))
+        }
+      } catch {
+        // ignore
+      }
       const qs = new URLSearchParams({ intent })
       const res = await fetch(`/api/auth/google/redirect?${qs}`, {
         credentials: "include",

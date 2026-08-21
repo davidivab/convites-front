@@ -15,13 +15,13 @@ import {
 } from "@/components/ui/select"
 import { AceptacionesLegales } from "@/components/auth/aceptaciones-legales"
 import { GoogleButton } from "@/components/auth/google-button"
-import { BrandMark } from "@/components/layout/brand-mark"
 import { useAuth } from "@/components/auth/auth-provider"
 import { DepartamentoMunicipioSelect } from "@/components/ui/departamento-municipio-select"
 import { PhoneInput, isPhoneValid } from "@/components/ui/phone-input"
 import { Textarea } from "@/components/ui/textarea"
 import { ApiError } from "@/lib/api"
 import { fetchCatalogos } from "@/lib/convites-api"
+import { consumeAuthNext, rememberAuthNext, safeNextPath } from "@/lib/auth-next"
 import { APTITUD_FISICA, GENEROS } from "@/lib/data"
 import type { ApiDisponibilidad, ApiHabilidad } from "@/lib/types"
 import {
@@ -63,6 +63,7 @@ export function RegistrarseClient() {
   const { register, completeGoogleRegistro } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
+  const nextParam = safeNextPath(searchParams.get("next"), "")
   const [step, setStep] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -96,6 +97,10 @@ export function RegistrarseClient() {
   const [aceptaDescargo, setAceptaDescargo] = useState(false)
 
   useEffect(() => {
+    if (nextParam) rememberAuthNext(nextParam)
+  }, [nextParam])
+
+  useEffect(() => {
     const fromQuery = searchParams.get("google_code")
     let fromSession: string | null = null
     try {
@@ -106,6 +111,11 @@ export function RegistrarseClient() {
     const code = fromQuery || fromSession
     if (code) setGoogleCode(code)
   }, [searchParams])
+
+  function destinoTrasRegistro(): string {
+    if (nextParam) return nextParam
+    return consumeAuthNext("/panel/aportante")
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -183,7 +193,7 @@ export function RegistrarseClient() {
         } catch {
           // ignore
         }
-        router.push("/panel/aportante")
+        router.push(destinoTrasRegistro())
         return
       }
 
@@ -194,7 +204,7 @@ export function RegistrarseClient() {
         password_confirmation: password,
         ...perfilOpcional,
       })
-      router.push("/panel/aportante")
+      router.push(destinoTrasRegistro())
     } catch (err) {
       const msg =
         err instanceof ApiError
@@ -224,21 +234,27 @@ export function RegistrarseClient() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10 md:py-14">
-      <BrandMark className="mb-8" />
       <div className="mb-8">
         <Link
-          href="/ingresar"
-          className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          href={nextParam ? `/ingresar?next=${encodeURIComponent(nextParam)}` : "/"}
+          className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
-          <ArrowLeft className="h-4 w-4" /> Ya tengo cuenta
+          <ArrowLeft className="h-4 w-4" />
+          {nextParam ? "Volver" : "Volver al inicio"}
         </Link>
         <h1 className="text-balance font-serif text-3xl text-foreground md:text-4xl">
           Únete a la comunidad
         </h1>
         <p className="mt-2 max-w-lg text-pretty leading-relaxed text-muted-foreground">
-          Crear tu cuenta nos ayuda a conectarte con los convites donde de verdad
-          puedes aportar, según lo que sabes hacer y tu disponibilidad.
+          Solo necesitas tus datos básicos para empezar. Lo demás del perfil es
+          opcional y lo puedes completar después, sin interrumpir lo que estabas
+          haciendo.
         </p>
+        {nextParam ? (
+          <p className="mt-2 text-sm text-primary">
+            Cuando termines, te devolvemos para que continues aportando.
+          </p>
+        ) : null}
       </div>
 
       {/* Stepper */}
@@ -568,7 +584,7 @@ export function RegistrarseClient() {
         ) : null}
 
         {/* Navigation */}
-        <div className="mt-8 flex items-center justify-between border-t border-border pt-6">
+        <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6">
           <Button
             variant="ghost"
             onClick={() => setStep((s) => Math.max(0, s - 1))}
@@ -577,24 +593,35 @@ export function RegistrarseClient() {
           >
             <ArrowLeft className="h-4 w-4" /> Atrás
           </Button>
-          {step < steps.length - 1 ? (
-            <Button
-              onClick={() => setStep((s) => s + 1)}
-              disabled={!canContinue}
-              className="gap-2"
-            >
-              Continuar <ArrowRight className="h-4 w-4" />
-            </Button>
-          ) : (
-            <Button
-              onClick={() => void onCrearCuenta()}
-              disabled={!aceptaTerminos || !aceptaDescargo || submitting}
-              className="gap-2"
-            >
-              {submitting ? "Creando…" : "Crear mi cuenta"}{" "}
-              <Check className="h-4 w-4" />
-            </Button>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {step < steps.length - 1 ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => void onCrearCuenta()}
+                  disabled={!canContinue || submitting}
+                >
+                  {submitting ? "Creando…" : "Crear cuenta ahora"}
+                </Button>
+                <Button
+                  onClick={() => setStep((s) => s + 1)}
+                  disabled={!canContinue}
+                  className="gap-2"
+                >
+                  Completar perfil <ArrowRight className="h-4 w-4" />
+                </Button>
+              </>
+            ) : (
+              <Button
+                onClick={() => void onCrearCuenta()}
+                disabled={!aceptaTerminos || !aceptaDescargo || submitting}
+                className="gap-2"
+              >
+                {submitting ? "Creando…" : "Crear mi cuenta"}{" "}
+                <Check className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>

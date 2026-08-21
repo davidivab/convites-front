@@ -1,6 +1,7 @@
 import type { AuthUser } from "@/lib/types"
 import {
   canAccessProfesionalPanel,
+  dashboardItemsForRole,
   hasModeratorRole,
   hasVoluntarioRole,
   resolvePrimaryRole,
@@ -14,17 +15,7 @@ export function accountMenuItems(user: AuthUser | null | undefined): DashboardNa
   if (!user) return []
   const primary = resolvePrimaryRole(user)
   if (primary === "admin") {
-    return [
-      { href: "/admin/ciudadanos", label: "Ciudadanos" },
-      { href: "/admin/usuarios", label: "Usuarios" },
-      { href: "/admin/moderadores", label: "Moderadores" },
-      { href: "/admin/voluntarios", label: "Voluntarios" },
-      { href: "/admin/solicitudes-rol", label: "Solicitudes de rol" },
-      { href: "/admin/convites", label: "Auditoría convites" },
-      { href: "/admin/moderacion", label: "Moderación" },
-      { href: "/admin/estadisticas", label: "Estadísticas" },
-      { href: "/perfil", label: "Mi perfil" },
-    ]
+    return dashboardItemsForRole(user)
   }
 
   const items: DashboardNavItem[] = [

@@ -3,15 +3,20 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { BrandMark } from "@/components/layout/brand-mark";
 import { AceptacionesLegales } from "@/components/auth/aceptaciones-legales";
 import { GoogleButton } from "@/components/auth/google-button";
 import { useAuth } from "@/components/auth/auth-provider";
 import { ApiError } from "@/lib/api";
+import {
+  authNextQuery,
+  rememberAuthNext,
+  safeNextPath,
+} from "@/lib/auth-next";
+import { ArrowLeft } from "lucide-react";
 
 const DEMO_ACCOUNTS: {
   email: string;
@@ -58,13 +63,17 @@ export function IngresarClient() {
   const { login } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") || "/panel/aportante";
+  const next = safeNextPath(searchParams.get("next"));
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [aceptaTerminos, setAceptaTerminos] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    rememberAuthNext(next);
+  }, [next]);
 
   const puedeAutenticar = aceptaTerminos;
 
@@ -97,8 +106,12 @@ export function IngresarClient() {
     <div className="grid min-h-[calc(100vh-4rem)] lg:grid-cols-2">
       <div className="flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm">
-          <Link href="/">
-            <BrandMark className="mb-8" />
+          <Link
+            href="/"
+            className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="size-4" />
+            Volver
           </Link>
           <h1 className="text-balance font-serif text-3xl text-foreground">
             Bienvenido de vuelta
@@ -227,7 +240,7 @@ export function IngresarClient() {
           <p className="mt-8 text-center text-sm text-muted-foreground">
             ¿Aún no tienes cuenta?{" "}
             <Link
-              href="/registrarse"
+              href={`/registrarse${authNextQuery(next)}`}
               className="font-medium text-primary transition-colors hover:text-primary/80"
             >
               Regístrate

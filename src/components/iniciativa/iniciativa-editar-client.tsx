@@ -37,14 +37,21 @@ import {
   uploadIniciativaPortada,
 } from "@/lib/convites-api"
 import { isImageFile, resizeImageFile } from "@/lib/image-resize"
+import {
+  isVideoFile,
+  MAX_VIDEO_BYTES,
+  MAX_VIDEO_SECONDS,
+  videoDurationSeconds,
+} from "@/lib/video-upload"
 import type { ApiAporte, ApiCategoria, ApiIniciativa } from "@/lib/types"
 import {
   perfilTabsForRole,
   resolvePrimaryRole,
   type RoleTree,
 } from "@/lib/role-tree"
+import { useAdminPerfilTabs } from "@/components/admin/use-admin-perfil-tabs"
 import { ITEM_UNIDAD_OPTIONS, ITEM_UNIDAD_VALUES } from "@/lib/item-unidades"
-import { ImagePlus, Link2, Plus, Trash2 } from "lucide-react"
+import { ImagePlus, Link2, Plus, Trash2, Video } from "lucide-react"
 
 const URGENCIAS = [
   { value: "alta", label: "Urgencia alta" },
@@ -77,7 +84,12 @@ type EnlaceDraft = {
   url: string
 }
 
-type GaleriaDraft = { id: number; url: string }
+type GaleriaDraft = {
+  id: number
+  tipo: "imagen" | "video"
+  url: string
+  duracionSegundos?: number | null
+}
 
 type PuntoDraft = {
   id: string
@@ -126,6 +138,12 @@ export function IniciativaEditarClient({
   const { user, token, loading: authLoading, hasPermission } = useRequireRoleTree(
     routePath,
     allowedRoles,
+  )
+  const primaryRole = resolvePrimaryRole(user)
+  const adminTabs = useAdminPerfilTabs(
+    user,
+    primaryRole === "admin" ? token : null,
+    routePath,
   )
 
   const [section, setSection] = useState<EditTab>("sobre")
@@ -246,7 +264,14 @@ export function IniciativaEditarClient({
             ],
       )
       setPortadaUrl(d.imagen_path || null)
-      setGaleria((d.galeria ?? []).map((g) => ({ id: g.id, url: g.url })))
+      setGaleria(
+        (d.galeria ?? []).map((g) => ({
+          id: g.id,
+          tipo: g.tipo,
+          url: g.url,
+          duracionSegundos: g.duracion_segundos ?? null,
+        })),
+      )
       setEnlaces(
         (d.enlaces ?? []).map((e) => ({
           key: String(e.id),
@@ -521,13 +546,62 @@ export function IniciativaEditarClient({
           file.name.replace(/\.\w+$/, "") + ".jpg",
         )
         setVersion(uploaded.version)
-        setGaleria((prev) => [...prev, { id: uploaded.id, url: uploaded.url }])
+        setGaleria((prev) => [
+          ...prev,
+          { id: uploaded.id, tipo: uploaded.tipo, url: uploaded.url },
+        ])
       }
     } catch (err) {
       setError(
         err instanceof ApiError
           ? err.body.message || "No pudimos subir una foto de la galería."
           : "No pudimos subir una foto de la galería.",
+      )
+    } finally {
+      setMediaBusy(false)
+    }
+  }
+
+  async function onGaleriaVideoFile(file: File | null) {
+    if (!token || !detalle || !file) return
+    if (!isVideoFile(file)) {
+      setError("Selecciona un archivo de video (mp4, mov o webm).")
+      return
+    }
+    if (file.size > MAX_VIDEO_BYTES) {
+      setError("El video no puede superar 50MB.")
+      return
+    }
+    setMediaBusy(true)
+    setError(null)
+    try {
+      const secs = await videoDurationSeconds(file)
+      if (secs > MAX_VIDEO_SECONDS) {
+        setError("El video no puede durar más de 2 minutos.")
+        return
+      }
+      const uploaded = await uploadIniciativaGaleria(
+        token,
+        detalle.id,
+        file,
+        file.name || "video.mp4",
+        { duracionSegundos: secs },
+      )
+      setVersion(uploaded.version)
+      setGaleria((prev) => [
+        ...prev,
+        {
+          id: uploaded.id,
+          tipo: uploaded.tipo,
+          url: uploaded.url,
+          duracionSegundos: uploaded.duracion_segundos ?? null,
+        },
+      ])
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.body.message || "No pudimos subir el video."
+          : "No pudimos subir el video.",
       )
     } finally {
       setMediaBusy(false)
@@ -569,15 +643,17 @@ export function IniciativaEditarClient({
 
   const primary = resolvePrimaryRole(user)
   const shellTabs =
-    primary === "admin" || primary === "moderador"
-      ? perfilTabsForRole(user, routePath)
-      : [
-          { href: "/panel/aportante", label: "Ayudas" },
-          { href: "/panel/creador", label: "Convites", active: true },
-          ...(hasPermission("profesional_perfil.view_own")
-            ? [{ href: "/panel/profesional", label: "Profesional" }]
-            : []),
-        ]
+    primary === "admin"
+      ? adminTabs
+      : primary === "moderador"
+        ? perfilTabsForRole(user, routePath)
+        : [
+            { href: "/panel/aportante", label: "Ayudas" },
+            { href: "/panel/creador", label: "Convites", active: true },
+            ...(hasPermission("profesional_perfil.view_own")
+              ? [{ href: "/panel/profesional", label: "Profesional" }]
+              : []),
+          ]
 
   const canSave =
     Boolean(
@@ -1305,9 +1381,10 @@ export function IniciativaEditarClient({
               />
 
               <div className="space-y-3 border-t border-border pt-6">
-                <Label>Galería de fotos</Label>
+                <Label>Galería multimedia</Label>
                 <p className="text-sm text-muted-foreground">
-                  Máximo 2000×2000 px, sin deformar. Hasta 12 fotos.
+                  Fotos: máximo 2000×2000 px, sin deformar. Videos: máximo 2
+                  minutos y 50MB. Hasta 12 archivos en total.
                 </p>
                 {galeria.length > 0 ? (
                   <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -1316,16 +1393,25 @@ export function IniciativaEditarClient({
                         key={g.id}
                         className="group relative aspect-square overflow-hidden rounded-xl border border-border bg-muted"
                       >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={g.url}
-                          alt=""
-                          className="h-full w-full object-cover"
-                        />
+                        {g.tipo === "video" ? (
+                          <video
+                            src={g.url}
+                            className="h-full w-full object-cover"
+                            muted
+                            playsInline
+                          />
+                        ) : (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={g.url}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        )}
                         <button
                           type="button"
                           className="absolute right-2 top-2 rounded-full bg-background/90 p-1.5 text-muted-foreground opacity-0 shadow transition-opacity group-hover:opacity-100 hover:text-destructive"
-                          aria-label="Quitar foto"
+                          aria-label={g.tipo === "video" ? "Quitar video" : "Quitar foto"}
                           disabled={mediaBusy}
                           onClick={() => void onRemoveGaleria(g.id)}
                         >
@@ -1336,21 +1422,37 @@ export function IniciativaEditarClient({
                   </ul>
                 ) : null}
                 {galeria.length < 12 ? (
-                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground">
-                    <ImagePlus className="h-4 w-4 text-primary" />
-                    {mediaBusy ? "Subiendo…" : "Agregar fotos"}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="sr-only"
-                      disabled={mediaBusy}
-                      onChange={(e) => {
-                        void onGaleriaFiles(e.target.files)
-                        e.target.value = ""
-                      }}
-                    />
-                  </label>
+                  <div className="flex flex-wrap gap-3">
+                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground">
+                      <ImagePlus className="h-4 w-4 text-primary" />
+                      {mediaBusy ? "Subiendo…" : "Agregar fotos"}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="sr-only"
+                        disabled={mediaBusy}
+                        onChange={(e) => {
+                          void onGaleriaFiles(e.target.files)
+                          e.target.value = ""
+                        }}
+                      />
+                    </label>
+                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground">
+                      <Video className="h-4 w-4 text-primary" />
+                      {mediaBusy ? "Subiendo…" : "Agregar video"}
+                      <input
+                        type="file"
+                        accept="video/*"
+                        className="sr-only"
+                        disabled={mediaBusy}
+                        onChange={(e) => {
+                          void onGaleriaVideoFile(e.target.files?.[0] ?? null)
+                          e.target.value = ""
+                        }}
+                      />
+                    </label>
+                  </div>
                 ) : null}
               </div>
 

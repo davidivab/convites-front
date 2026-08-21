@@ -16,7 +16,10 @@ import { StatusBadge, UrgencyBadge } from "@/components/iniciativa/status-badges
 import { ItemProgressRow } from "@/components/iniciativa/item-progress-row";
 import { ExternalMoneyCallout } from "@/components/iniciativa/external-money-callout";
 import { IniciativaMapSection } from "@/components/iniciativa/iniciativa-map-section";
+import { IniciativaGaleriaGrid } from "@/components/iniciativa/iniciativa-galeria-grid";
 import { AvancesAsideCard } from "@/components/iniciativa/avances-aside-card";
+import { IniciativaAporteCtas } from "@/components/iniciativa/iniciativa-aporte-ctas";
+import { ConviteRecordatorio } from "@/components/iniciativa/convite-recordatorio";
 import { CATEGORIAS, progresoTotal } from "@/lib/data";
 import { fetchAvances, fetchIniciativa } from "@/lib/convites-api";
 import type { ApiAvance } from "@/lib/types";
@@ -91,6 +94,16 @@ export default async function IniciativaPage({
             </span>
           </div>
 
+          <ConviteRecordatorio
+            iniciativaId={Number(ini.id)}
+            slug={ini.slug}
+            titulo={ini.titulo}
+            fechaTexto={ini.fechaConvite}
+            fechaISO={ini.fechaISO}
+            lugar={lugar}
+            ciudad={ini.zona}
+          />
+
           <div className="mt-6 grid gap-8 lg:grid-cols-[1.7fr_1fr]">
             <div>
               <div className="relative aspect-[16/9] overflow-hidden rounded-2xl">
@@ -134,22 +147,7 @@ export default async function IniciativaPage({
                   <h2 className="font-serif text-2xl font-semibold text-foreground">
                     Galería
                   </h2>
-                  <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    {ini.galeria!.map((g) => (
-                      <li
-                        key={g.id}
-                        className="relative aspect-square overflow-hidden rounded-xl bg-muted"
-                      >
-                        <Image
-                          src={g.url}
-                          alt=""
-                          fill
-                          sizes="(max-width: 768px) 50vw, 220px"
-                          className="object-cover"
-                        />
-                      </li>
-                    ))}
-                  </ul>
+                  <IniciativaGaleriaGrid items={ini.galeria!} />
                 </section>
               ) : null}
 
@@ -318,23 +316,11 @@ export default async function IniciativaPage({
                   ))}
                 </div>
 
-                <div className="mt-5 flex flex-col gap-2.5">
-                  <Button
-                    size="lg"
-                    className="h-12 w-full text-base"
-                    render={<Link href={`/iniciativa/${ini.slug}/aportar`} />}
-                  >
-                    Me sumo llevando algo
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="lg"
-                    className="h-11 w-full text-base"
-                    render={<Link href={`/iniciativa/${ini.slug}/aportar`} />}
-                  >
-                    Puedo apoyar con mi tiempo
-                  </Button>
-                </div>
+                <IniciativaAporteCtas
+                  slug={ini.slug}
+                  iniciativaId={Number(ini.id)}
+                  fechaConvite={ini.fechaConvite}
+                />
 
                 {ini.enlaceExterno && (
                   <div className="mt-4">

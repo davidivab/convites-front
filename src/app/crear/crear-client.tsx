@@ -33,6 +33,12 @@ import {
   uploadIniciativaPortada,
 } from "@/lib/convites-api"
 import { isImageFile, resizeImageFile } from "@/lib/image-resize"
+import {
+  isVideoFile,
+  MAX_VIDEO_BYTES,
+  MAX_VIDEO_SECONDS,
+  videoDurationSeconds,
+} from "@/lib/video-upload"
 import { ITEM_UNIDAD_OPTIONS, ITEM_UNIDAD_VALUES } from "@/lib/item-unidades"
 import type { ApiCategoria, ApiIniciativa } from "@/lib/types"
 import {
@@ -51,6 +57,7 @@ import {
   ShieldCheck,
   Link2,
   ImagePlus,
+  Video,
 } from "lucide-react"
 import dynamic from "next/dynamic"
 import type { MapLocation } from "@/components/map/location-picker"
@@ -105,7 +112,9 @@ type EnlaceDraft = {
 
 type GaleriaDraft = {
   id: number
+  tipo: "imagen" | "video"
   url: string
+  duracionSegundos?: number | null
 }
 
 const steps = [
@@ -327,7 +336,9 @@ function CrearClientInner() {
     setGaleria(
       (api.galeria ?? []).map((g) => ({
         id: g.id,
+        tipo: g.tipo,
         url: g.url,
+        duracionSegundos: g.duracion_segundos ?? null,
       })),
     )
     setEnlaces(
@@ -667,10 +678,57 @@ function CrearClientInner() {
           file.name.replace(/\.\w+$/, "") + ".jpg",
         )
         setDraftVersion(uploaded.version)
-        setGaleria((prev) => [...prev, { id: uploaded.id, url: uploaded.url }])
+        setGaleria((prev) => [
+          ...prev,
+          { id: uploaded.id, tipo: uploaded.tipo, url: uploaded.url },
+        ])
       }
     } catch (err) {
       setError(apiErrorMessage(err, "No pudimos subir una foto de la galería."))
+    } finally {
+      setMediaBusy(false)
+    }
+  }
+
+  async function onGaleriaVideoFile(file: File | null) {
+    if (!token || !file) return
+    if (!isVideoFile(file)) {
+      setError("Selecciona un archivo de video (mp4, mov o webm).")
+      return
+    }
+    if (file.size > MAX_VIDEO_BYTES) {
+      setError("El video no puede superar 50MB.")
+      return
+    }
+    setMediaBusy(true)
+    setError(null)
+    try {
+      const secs = await videoDurationSeconds(file)
+      if (secs > MAX_VIDEO_SECONDS) {
+        setError("El video no puede durar más de 2 minutos.")
+        return
+      }
+      const id = await ensureDraftId()
+      if (id == null) return
+      const uploaded = await uploadIniciativaGaleria(
+        token,
+        id,
+        file,
+        file.name || "video.mp4",
+        { duracionSegundos: secs },
+      )
+      setDraftVersion(uploaded.version)
+      setGaleria((prev) => [
+        ...prev,
+        {
+          id: uploaded.id,
+          tipo: uploaded.tipo,
+          url: uploaded.url,
+          duracionSegundos: uploaded.duracion_segundos ?? null,
+        },
+      ])
+    } catch (err) {
+      setError(apiErrorMessage(err, "No pudimos subir el video."))
     } finally {
       setMediaBusy(false)
     }
@@ -1470,10 +1528,11 @@ function CrearClientInner() {
             />
 
             <div className="space-y-3 border-t border-border pt-6">
-              <Label>Galería de fotos</Label>
+              <Label>Galería multimedia</Label>
               <p className="text-sm text-muted-foreground">
-                Puedes subir más fotos. Las reducimos automáticamente a máximo
-                2000×2000 px sin deformarlas.
+                Puedes subir fotos y videos. Las fotos se reducen
+                automáticamente a máximo 2000×2000 px sin deformarlas; los
+                videos deben durar máximo 2 minutos y pesar hasta 50MB.
               </p>
               {galeria.length > 0 ? (
                 <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -1482,16 +1541,25 @@ function CrearClientInner() {
                       key={g.id}
                       className="group relative aspect-square overflow-hidden rounded-xl border border-border bg-muted"
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={g.url}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
+                      {g.tipo === "video" ? (
+                        <video
+                          src={g.url}
+                          className="h-full w-full object-cover"
+                          muted
+                          playsInline
+                        />
+                      ) : (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={g.url}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      )}
                       <button
                         type="button"
                         className="absolute right-2 top-2 rounded-full bg-background/90 p-1.5 text-muted-foreground opacity-0 shadow transition-opacity group-hover:opacity-100 hover:text-destructive"
-                        aria-label="Quitar foto"
+                        aria-label={g.tipo === "video" ? "Quitar video" : "Quitar foto"}
                         disabled={mediaBusy}
                         onClick={() => void onRemoveGaleria(g.id)}
                       >
@@ -1502,21 +1570,37 @@ function CrearClientInner() {
                 </ul>
               ) : null}
               {galeria.length < 12 ? (
-                <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground">
-                  <ImagePlus className="h-4 w-4 text-primary" />
-                  {mediaBusy ? "Subiendo…" : "Agregar fotos"}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="sr-only"
-                    disabled={mediaBusy}
-                    onChange={(e) => {
-                      void onGaleriaFiles(e.target.files)
-                      e.target.value = ""
-                    }}
-                  />
-                </label>
+                <div className="flex flex-wrap gap-3">
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground">
+                    <ImagePlus className="h-4 w-4 text-primary" />
+                    {mediaBusy ? "Subiendo…" : "Agregar fotos"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="sr-only"
+                      disabled={mediaBusy}
+                      onChange={(e) => {
+                        void onGaleriaFiles(e.target.files)
+                        e.target.value = ""
+                      }}
+                    />
+                  </label>
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground">
+                    <Video className="h-4 w-4 text-primary" />
+                    {mediaBusy ? "Subiendo…" : "Agregar video"}
+                    <input
+                      type="file"
+                      accept="video/*"
+                      className="sr-only"
+                      disabled={mediaBusy}
+                      onChange={(e) => {
+                        void onGaleriaVideoFile(e.target.files?.[0] ?? null)
+                        e.target.value = ""
+                      }}
+                    />
+                  </label>
+                </div>
               ) : null}
             </div>
 

@@ -5,6 +5,12 @@ Sesión agente 2026-08-16 (loop 5h + trabajo previo en la misma chat).
 
 ---
 
+### [F42] Admin Usuarios unificado — 2026-08-20
+- Una sola pestaña `/admin/usuarios` con columnas de rol (✓ / ⚠), filtros `tipo`+`q` por query params
+- Detalle `/admin/usuarios/[id]` con cards aprobar/rechazar (solicitud-rol + profesional)
+- Redirects: ciudadanos/moderadores/voluntarios/solicitudes-rol → usuarios filtrado
+- Nav admin simplificado; **Depende de P56**
+
 ### [F41] Avances de convite (UI + client API) — 2026-08-20
 - Tab **Avances** en editor compartido (`/admin/convites/[slug]`, creador, moderación)
 - Card pública bajo “Lo que falta” (últimos 5 + ver más) si hay ≥1

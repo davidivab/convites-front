@@ -81,7 +81,7 @@ describe("homeForRole", () => {
 })
 
 describe("dashboardItemsForRole", () => {
-  it("admin ve usuarios/moderadores/voluntarios + solicitudes + moderación + perfil", () => {
+  it("admin ve usuarios unificado + operación + perfil", () => {
     const items = dashboardItemsForRole(
       user({
         roles: ["admin"],
@@ -89,11 +89,7 @@ describe("dashboardItemsForRole", () => {
       }),
     )
     expect(items.map((i) => i.href)).toEqual([
-      "/admin/ciudadanos",
       "/admin/usuarios",
-      "/admin/moderadores",
-      "/admin/voluntarios",
-      "/admin/solicitudes-rol",
       "/admin/convites",
       "/admin/moderacion",
       "/admin/estadisticas",
@@ -134,58 +130,39 @@ describe("perfilTabsForRole", () => {
     permissions: ["users.manage", "iniciativas.moderate"],
   })
 
-  it("admin siempre ve las pestañas de listas + operación", () => {
+  it("admin ve pestaña Usuarios unificada + operación", () => {
     const tabs = perfilTabsForRole(admin, "/admin/usuarios")
     expect(tabs.map((t) => t.label)).toEqual([
-      "Ciudadanos",
       "Usuarios",
-      "Moderadores",
-      "Voluntarios",
-      "Solicitudes",
       "Convites",
       "Moderación",
       "Estadísticas",
       "Perfil",
     ])
     expect(tabs.map((t) => t.href)).toEqual([
-      "/admin/ciudadanos",
       "/admin/usuarios",
-      "/admin/moderadores",
-      "/admin/voluntarios",
-      "/admin/solicitudes-rol",
       "/admin/convites",
       "/admin/moderacion",
       "/admin/estadisticas",
       "/perfil",
     ])
+    expect(tabs.find((t) => t.href === "/admin/usuarios")?.active).toBe(true)
   })
 
   it("en /admin/convites solo Convites queda activo (no Usuarios)", () => {
     const tabs = perfilTabsForRole(admin, "/admin/convites")
     expect(tabs.find((t) => t.href === "/admin/usuarios")?.active).toBe(false)
     expect(tabs.find((t) => t.href === "/admin/convites")?.active).toBe(true)
-    expect(tabs.find((t) => t.href === "/admin/solicitudes-rol")?.active).toBe(
-      false,
-    )
   })
 
-  it("en /admin/solicitudes-rol solo Solicitudes queda activo", () => {
-    const tabs = perfilTabsForRole(admin, "/admin/solicitudes-rol")
-    expect(tabs.find((t) => t.href === "/admin/solicitudes-rol")?.active).toBe(
-      true,
-    )
-    expect(tabs.find((t) => t.href === "/admin/usuarios")?.active).toBe(false)
+  it("en /admin/usuarios/[id] Usuarios queda activo", () => {
+    const tabs = perfilTabsForRole(admin, "/admin/usuarios/42")
+    expect(tabs.find((t) => t.href === "/admin/usuarios")?.active).toBe(true)
   })
 
   it("en /admin/moderacion solo Moderación queda activo", () => {
     const tabs = perfilTabsForRole(admin, "/admin/moderacion")
     expect(tabs.find((t) => t.href === "/admin/moderacion")?.active).toBe(true)
-    expect(tabs.find((t) => t.href === "/admin/usuarios")?.active).toBe(false)
-  })
-
-  it("en /admin/moderadores solo Moderadores queda activo", () => {
-    const tabs = perfilTabsForRole(admin, "/admin/moderadores")
-    expect(tabs.find((t) => t.href === "/admin/moderadores")?.active).toBe(true)
     expect(tabs.find((t) => t.href === "/admin/usuarios")?.active).toBe(false)
   })
 })

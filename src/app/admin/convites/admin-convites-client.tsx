@@ -19,9 +19,10 @@ import {
 } from "@/components/ui/select"
 import { useRequireRoleTree } from "@/hooks/use-require-role-tree"
 import { ApiError } from "@/lib/api"
+import { useAdminPerfilTabs } from "@/components/admin/use-admin-perfil-tabs"
 import { fetchAdminIniciativas } from "@/lib/convites-api"
+import { formatCOP } from "@/lib/format"
 import type { ApiIniciativa } from "@/lib/types"
-import { perfilTabsForRole } from "@/lib/role-tree"
 
 const ESTADOS = [
   { value: "todas", label: "Todas" },
@@ -36,6 +37,27 @@ const ESTADOS = [
 function formatProgreso(value: number | null | undefined): string {
   if (value == null || Number.isNaN(value)) return "—"
   return `${Math.round(value)}%`
+}
+
+/** Fecha ISO → yyyy-mm-dd (o —). */
+function formatYmd(value: string | null | undefined): string {
+  if (!value) return "—"
+  const day = value.slice(0, 10)
+  return /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : "—"
+}
+
+/** Suma valor_meta_aprox de ítems (meta económica del convite). */
+function sumValorItems(ini: ApiIniciativa): number | null {
+  const items = ini.items ?? []
+  let total = 0
+  let any = false
+  for (const it of items) {
+    if (it.valor_meta_aprox != null && !Number.isNaN(Number(it.valor_meta_aprox))) {
+      total += Number(it.valor_meta_aprox)
+      any = true
+    }
+  }
+  return any ? total : null
 }
 
 function contactoLabel(ini: ApiIniciativa): string {
@@ -59,6 +81,7 @@ export function AdminConvitesClient() {
     "admin",
   )
   const canManage = hasPermission("users.manage")
+  const tabs = useAdminPerfilTabs(user, token, "/admin/convites")
 
   const [items, setItems] = useState<ApiIniciativa[]>([])
   const [loading, setLoading] = useState(true)
@@ -184,6 +207,30 @@ export function AdminConvitesClient() {
         cell: (ini) => ini.estado_label ?? ini.estado,
       },
       {
+        id: "created_at",
+        header: "Creación",
+        width: "7.5rem",
+        cellClassName: "font-mono tabular-nums text-muted-foreground",
+        cell: (ini) => formatYmd(ini.created_at),
+      },
+      {
+        id: "fecha_convite",
+        header: "Ejecución",
+        width: "7.5rem",
+        cellClassName: "font-mono tabular-nums text-muted-foreground",
+        cell: (ini) => formatYmd(ini.fecha_convite),
+      },
+      {
+        id: "valor_items",
+        header: "Valor ítems",
+        width: "8rem",
+        cellClassName: "font-mono tabular-nums text-foreground",
+        cell: (ini) => {
+          const total = sumValorItems(ini)
+          return total == null ? "—" : formatCOP(total)
+        },
+      },
+      {
         id: "progreso",
         header: "Evolución",
         width: "6rem",
@@ -221,7 +268,7 @@ export function AdminConvitesClient() {
     <DashboardShell
       title="Auditoría de convites"
       subtitle="Listado completo sin filtro de municipio. Abre un convite para ver historial de moderación y aportantes."
-      tabs={perfilTabsForRole(user, "/admin/convites")}
+      tabs={tabs}
     >
       {error ? <p className="mb-4 text-sm text-destructive">{error}</p> : null}
 

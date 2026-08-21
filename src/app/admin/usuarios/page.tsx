@@ -15,12 +15,7 @@ export default function AdminUsuariosPage() {
         </div>
       }
     >
-      <AdminUsersListClient
-        title="Usuarios con rol"
-        subtitle="Moderadores y voluntarios (roles especiales). Para ver a todos los registrados, usa Ciudadanos."
-        activePath="/admin/usuarios"
-        listMode="staff"
-      />
+      <AdminUsersListClient />
     </Suspense>
   )
 }

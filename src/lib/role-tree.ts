@@ -61,7 +61,12 @@ export function hasVoluntarioRole(user: AuthUser | null | undefined): boolean {
   return Boolean(user?.roles?.includes("voluntario"))
 }
 
-export type DashboardNavItem = { href: string; label: string }
+export type DashboardNavItem = {
+  href: string
+  label: string
+  /** Contador opcional (p. ej. pendientes de moderación). */
+  badge?: number | null
+}
 
 /** Nav de ciudadano: aportante/organizador + solicitudes de rol (+ paneles operativos si aplica). */
 function ciudadanoNavItems(user: AuthUser): DashboardNavItem[] {
@@ -95,11 +100,7 @@ export function dashboardItemsForRole(
 
   if (primary === "admin") {
     return [
-      { href: "/admin/ciudadanos", label: "Ciudadanos" },
       { href: "/admin/usuarios", label: "Usuarios" },
-      { href: "/admin/moderadores", label: "Moderadores" },
-      { href: "/admin/voluntarios", label: "Voluntarios" },
-      { href: "/admin/solicitudes-rol", label: "Solicitudes de rol" },
       { href: "/admin/convites", label: "Auditoría convites" },
       { href: "/admin/moderacion", label: "Moderación" },
       { href: "/admin/estadisticas", label: "Estadísticas" },
@@ -126,11 +127,7 @@ export function perfilTabsForRole(
   const items: DashboardNavItem[] =
     primary === "admin"
       ? [
-          { href: "/admin/ciudadanos", label: "Ciudadanos" },
           { href: "/admin/usuarios", label: "Usuarios" },
-          { href: "/admin/moderadores", label: "Moderadores" },
-          { href: "/admin/voluntarios", label: "Voluntarios" },
-          { href: "/admin/solicitudes-rol", label: "Solicitudes" },
           { href: "/admin/convites", label: "Convites" },
           { href: "/admin/moderacion", label: "Moderación" },
           { href: "/admin/estadisticas", label: "Estadísticas" },

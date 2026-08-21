@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   Check,
@@ -18,6 +18,12 @@ import { progresoItem, type Iniciativa } from "@/lib/data";
 import { crearAporte } from "@/lib/convites-api";
 import { ApiError } from "@/lib/api";
 import { formatCOP } from "@/lib/format";
+import { rememberAuthNext } from "@/lib/auth-next";
+import {
+  clearAporteDraft,
+  loadAporteDraft,
+  saveAporteDraft,
+} from "@/lib/aporte-draft";
 
 function formatFechaEntrega(value: string): string {
   try {
@@ -46,6 +52,39 @@ export function AportarClient({ iniciativa }: { iniciativa: Iniciativa }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const aportePath = `/iniciativa/${iniciativa.slug}/aportar`;
+
+  useEffect(() => {
+    const draft = loadAporteDraft(iniciativa.slug);
+    if (!draft) return;
+    setCantidades(draft.cantidades ?? {});
+    setAsisto(draft.asisto ?? true);
+    setAnonimo(draft.anonimo ?? false);
+    setPuntoAcopioId(draft.puntoAcopioId ?? "");
+    setComproDeProveedor(draft.comproDeProveedor ?? false);
+    setProveedorId(draft.proveedorId ?? "");
+    setFechaEntrega(draft.fechaEntrega ?? "");
+    if (draft.openCompromiso && token) {
+      setMostrarCompromiso(true);
+    }
+    clearAporteDraft(iniciativa.slug);
+  }, [iniciativa.slug, token]);
+
+  function persistDraftAndGoAuth() {
+    saveAporteDraft(iniciativa.slug, {
+      cantidades,
+      asisto,
+      anonimo,
+      puntoAcopioId,
+      comproDeProveedor,
+      proveedorId,
+      fechaEntrega,
+      openCompromiso: true,
+    });
+    rememberAuthNext(aportePath);
+    router.push(`/ingresar?next=${encodeURIComponent(aportePath)}`);
+  }
+
   function setCantidad(id: string, valor: number) {
     setCantidades((prev) => ({ ...prev, [id]: Math.max(0, valor) }));
   }
@@ -72,9 +111,7 @@ export function AportarClient({ iniciativa }: { iniciativa: Iniciativa }) {
 
   function pedirConfirmacion() {
     if (!token) {
-      router.push(
-        `/ingresar?next=${encodeURIComponent(`/iniciativa/${iniciativa.slug}/aportar`)}`,
-      );
+      persistDraftAndGoAuth();
       return;
     }
     setError(null);
@@ -83,9 +120,7 @@ export function AportarClient({ iniciativa }: { iniciativa: Iniciativa }) {
 
   async function confirmar() {
     if (!token) {
-      router.push(
-        `/ingresar?next=${encodeURIComponent(`/iniciativa/${iniciativa.slug}/aportar`)}`,
-      );
+      persistDraftAndGoAuth();
       return;
     }
 
@@ -165,7 +200,7 @@ export function AportarClient({ iniciativa }: { iniciativa: Iniciativa }) {
           <p className="mt-3 rounded-xl border border-border bg-sidebar/60 px-4 py-3 text-sm text-muted-foreground">
             Vas a necesitar{" "}
             <Link
-              href={`/ingresar?next=${encodeURIComponent(`/iniciativa/${iniciativa.slug}/aportar`)}`}
+              href={`/ingresar?next=${encodeURIComponent(aportePath)}`}
               className="font-medium text-primary underline"
             >
               iniciar sesión

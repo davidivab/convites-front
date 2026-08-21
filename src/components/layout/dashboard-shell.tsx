@@ -6,7 +6,12 @@ import { SiteHeader } from "@/components/layout/site-header"
 import { SiteFooter } from "@/components/layout/site-footer"
 import { cn } from "@/lib/utils"
 
-type Tab = { href: string; label: string; active?: boolean }
+type Tab = {
+  href: string
+  label: string
+  active?: boolean
+  badge?: number | null
+}
 
 export function DashboardShell({
   title,
@@ -38,21 +43,38 @@ export function DashboardShell({
               className="mb-8 flex gap-1 overflow-x-auto border-b border-border pb-px [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
               aria-label="Secciones del panel"
             >
-              {tabs.map((t) => (
-                <Link
-                  key={t.href}
-                  href={t.href}
-                  aria-current={t.active ? "page" : undefined}
-                  className={cn(
-                    "-mb-px shrink-0 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
-                    t.active
-                      ? "border-primary text-foreground"
-                      : "border-transparent text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {t.label}
-                </Link>
-              ))}
+              {tabs.map((t) => {
+                const showBadge =
+                  typeof t.badge === "number" && t.badge > 0
+                return (
+                  <Link
+                    key={t.href}
+                    href={t.href}
+                    aria-current={t.active ? "page" : undefined}
+                    className={cn(
+                      "-mb-px inline-flex shrink-0 items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
+                      t.active
+                        ? "border-primary text-foreground"
+                        : "border-transparent text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {t.label}
+                    {showBadge ? (
+                      <span
+                        className={cn(
+                          "inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[0.65rem] font-semibold tabular-nums",
+                          t.active
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-warning/20 text-warning",
+                        )}
+                        aria-label={`${t.badge} pendientes`}
+                      >
+                        {t.badge! > 99 ? "99+" : t.badge}
+                      </span>
+                    ) : null}
+                  </Link>
+                )
+              })}
             </nav>
           ) : null}
 

@@ -17,6 +17,7 @@ import {
 } from "@/lib/convites-api"
 import type { Iniciativa } from "@/lib/data"
 import { perfilTabsForRole } from "@/lib/role-tree"
+import { useAdminPerfilTabs } from "@/components/admin/use-admin-perfil-tabs"
 import { Bell, Check, X, MapPin, Clock, Package, ShieldCheck, MessageSquare } from "lucide-react"
 
 type DecisionLocal = "aprobada" | "rechazada" | "cambios" | null
@@ -55,6 +56,14 @@ export function ModeracionClient({
   const [notifBusy, setNotifBusy] = useState(false)
 
   const canModerate = hasPermission("iniciativas.moderate")
+  const isAdminPath = basePath.startsWith("/admin")
+  const adminTabs = useAdminPerfilTabs(
+    user,
+    isAdminPath ? token : null,
+    basePath,
+  )
+  const citizenTabs = perfilTabsForRole(user, basePath)
+  const tabs = isAdminPath ? adminTabs : citizenTabs
 
   const loadNotifs = useCallback(async () => {
     if (!token) return
@@ -192,7 +201,6 @@ export function ModeracionClient({
   }
 
   const pendientes = cola.filter((i) => !decisiones[i.id]).length
-  const tabs = perfilTabsForRole(user, basePath)
 
   return (
     <DashboardShell

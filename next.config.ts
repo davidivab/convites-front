@@ -74,6 +74,7 @@ const nextConfig: NextConfig = {
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https: http:",
+              "media-src 'self' blob: https: http:",
               "connect-src 'self' https://*.tile.openstreetmap.org https://www.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com",
               "font-src 'self' data:",
               "frame-ancestors 'none'",

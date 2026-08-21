@@ -1,7 +1,9 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
+import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { Check, TriangleAlert, Search } from "lucide-react"
 import { DashboardShell } from "@/components/layout/dashboard-shell"
 import {
   DataTable,
@@ -11,22 +13,34 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useRequireRoleTree } from "@/hooks/use-require-role-tree"
 import { ApiError } from "@/lib/api"
-import { fetchAdminUsers, type ApiAdminUser } from "@/lib/convites-api"
-import { perfilTabsForRole } from "@/lib/role-tree"
-import { Search } from "lucide-react"
-
-const ROLE_LABEL: Record<string, string> = {
-  admin: "Administrador",
-  moderator: "Moderador",
-  voluntario: "Voluntario",
-  member: "Ciudadano",
-  profesional: "Profesional",
-}
+import {
+  fetchAdminUsers,
+  type AdminRoleStatus,
+  type AdminUserTipo,
+  type ApiAdminUser,
+} from "@/lib/convites-api"
+import { useAdminPerfilTabs } from "@/components/admin/use-admin-perfil-tabs"
 
 const SORT_VALUES = ["name", "email", "created_at"] as const
 type SortKey = (typeof SORT_VALUES)[number]
+
+const TIPO_OPTIONS: Array<{ value: AdminUserTipo; label: string }> = [
+  { value: "todos", label: "Todos" },
+  { value: "ciudadano", label: "Ciudadanos" },
+  { value: "moderador", label: "Moderadores" },
+  { value: "voluntario", label: "Voluntarios" },
+  { value: "profesional", label: "Profesionales" },
+  { value: "pendientes", label: "Pendientes de aprobación" },
+]
 
 function parseSort(raw: string | null): SortKey {
   if (raw && (SORT_VALUES as readonly string[]).includes(raw)) {
@@ -44,18 +58,20 @@ function parsePage(raw: string | null): number {
   return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1
 }
 
-function funcionLabel(roles: string[]): string {
-  if (roles.length === 0) return "Sin rol"
-  return roles.map((r) => ROLE_LABEL[r] ?? r).join(" · ")
+function parseTipo(raw: string | null): AdminUserTipo {
+  const found = TIPO_OPTIONS.find((o) => o.value === raw)
+  return found?.value ?? "todos"
 }
 
 function buildUsersQuery(opts: {
   q: string
+  tipo: AdminUserTipo
   sort: SortKey
   order: "asc" | "desc"
   page: number
 }): string {
   const params = new URLSearchParams()
+  if (opts.tipo !== "todos") params.set("tipo", opts.tipo)
   if (opts.q) params.set("q", opts.q)
   if (opts.sort !== "name") params.set("sort", opts.sort)
   if (opts.order !== "asc") params.set("order", opts.order)
@@ -64,34 +80,59 @@ function buildUsersQuery(opts: {
   return s ? `?${s}` : ""
 }
 
-export function AdminUsersListClient({
-  title,
-  subtitle,
-  activePath,
-  listMode,
-}: {
-  title: string
-  subtitle: string
-  activePath: string
-  /** staff = moderador+voluntario (default API); todos = ciudadanos con `todos=1` */
-  listMode: "staff" | "todos" | "moderator" | "voluntario"
-}) {
+function RoleStatusCell({ status }: { status: AdminRoleStatus }) {
+  if (status === "active") {
+    return (
+      <span
+        className="inline-flex size-7 items-center justify-center rounded-md bg-primary/10 text-primary"
+        title="Activo"
+      >
+        <Check className="size-4" aria-hidden />
+        <span className="sr-only">Activo</span>
+      </span>
+    )
+  }
+  if (status === "pending") {
+    return (
+      <span
+        className="inline-flex size-7 items-center justify-center rounded-md bg-warning/15 text-warning"
+        title="Pendiente de aprobación"
+      >
+        <TriangleAlert className="size-4" aria-hidden />
+        <span className="sr-only">Pendiente</span>
+      </span>
+    )
+  }
+  return <span className="text-muted-foreground">—</span>
+}
+
+function statusOf(
+  u: ApiAdminUser,
+  key: keyof NonNullable<ApiAdminUser["roles_status"]>,
+): AdminRoleStatus {
+  return u.roles_status?.[key] ?? "none"
+}
+
+export function AdminUsersListClient() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
   const { user, token, loading: authLoading, hasPermission } = useRequireRoleTree(
-    activePath,
+    "/admin/usuarios",
     "admin",
   )
   const canManage = hasPermission("users.manage")
+  const tabs = useAdminPerfilTabs(user, token, "/admin/usuarios")
 
   const q = (searchParams.get("q") ?? "").trim()
+  const tipo = parseTipo(searchParams.get("tipo"))
   const sort = parseSort(searchParams.get("sort"))
   const order = parseOrder(searchParams.get("order"))
   const page = parsePage(searchParams.get("page"))
 
   const [qDraft, setQDraft] = useState(q)
+  const [tipoDraft, setTipoDraft] = useState<AdminUserTipo>(tipo)
   const [items, setItems] = useState<ApiAdminUser[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -103,10 +144,12 @@ export function AdminUsersListClient({
 
   useEffect(() => {
     setQDraft(q)
-  }, [q])
+    setTipoDraft(tipo)
+  }, [q, tipo])
 
   function replaceQuery(next: {
     q?: string
+    tipo?: AdminUserTipo
     sort?: SortKey
     order?: "asc" | "desc"
     page?: number
@@ -115,6 +158,7 @@ export function AdminUsersListClient({
       pathname +
       buildUsersQuery({
         q: next.q !== undefined ? next.q.trim() : q,
+        tipo: next.tipo ?? tipo,
         sort: next.sort ?? sort,
         order: next.order ?? order,
         page: next.page ?? page,
@@ -122,22 +166,14 @@ export function AdminUsersListClient({
     router.replace(href, { scroll: false })
   }
 
-  useEffect(() => {
-    const trimmed = qDraft.trim()
-    if (trimmed === q) return
-    const handle = window.setTimeout(() => {
-      const href =
-        pathname +
-        buildUsersQuery({
-          q: trimmed,
-          sort,
-          order,
-          page: 1,
-        })
-      router.replace(href, { scroll: false })
-    }, 300)
-    return () => window.clearTimeout(handle)
-  }, [qDraft, q, pathname, sort, order, router])
+  function applyFilters(e?: React.FormEvent) {
+    e?.preventDefault()
+    replaceQuery({
+      q: qDraft.trim(),
+      tipo: tipoDraft,
+      page: 1,
+    })
+  }
 
   const load = useCallback(async () => {
     if (!token) return
@@ -145,11 +181,8 @@ export function AdminUsersListClient({
     setError(null)
     try {
       const res = await fetchAdminUsers(token, {
-        ...(listMode === "todos"
-          ? { todos: true }
-          : listMode === "staff"
-            ? {}
-            : { role: listMode }),
+        tipo,
+        todos: true,
         q: q || undefined,
         sort,
         order,
@@ -172,7 +205,7 @@ export function AdminUsersListClient({
     } finally {
       setLoading(false)
     }
-  }, [token, listMode, q, sort, order, page])
+  }, [token, tipo, q, sort, order, page])
 
   useEffect(() => {
     if (authLoading || !token || !canManage) {
@@ -183,19 +216,24 @@ export function AdminUsersListClient({
   }, [authLoading, token, canManage, load])
 
   const columns = useMemo((): Array<DataTableColumn<ApiAdminUser>> => {
-    const cols: Array<DataTableColumn<ApiAdminUser>> = [
+    return [
       {
         id: "name",
         header: "Nombre",
         sortable: true,
         minWidth: "10rem",
         cell: (u) => (
-          <span className="font-medium text-foreground">{u.name}</span>
+          <Link
+            href={`/admin/usuarios/${u.id}`}
+            className="font-medium text-foreground underline-offset-2 hover:underline"
+          >
+            {u.name}
+          </Link>
         ),
       },
       {
         id: "email",
-        header: "Correo",
+        header: "Correo / celular",
         sortable: true,
         minWidth: "14rem",
         cell: (u) => (
@@ -208,46 +246,46 @@ export function AdminUsersListClient({
         ),
       },
       {
-        id: "roles",
-        header: "Función",
-        width: "11rem",
-        cell: (u) => (
-          <span className="rounded-full border border-border px-2 py-0.5 text-xs font-medium">
-            {funcionLabel(u.roles)}
-          </span>
-        ),
+        id: "ciudadano",
+        header: "Ciudadano",
+        width: "6.5rem",
+        cellClassName: "text-center",
+        cell: (u) => <RoleStatusCell status={statusOf(u, "ciudadano")} />,
+      },
+      {
+        id: "moderador",
+        header: "Moderador",
+        width: "6.5rem",
+        cellClassName: "text-center",
+        cell: (u) => <RoleStatusCell status={statusOf(u, "moderador")} />,
+      },
+      {
+        id: "voluntario",
+        header: "Voluntario",
+        width: "6.5rem",
+        cellClassName: "text-center",
+        cell: (u) => <RoleStatusCell status={statusOf(u, "voluntario")} />,
+      },
+      {
+        id: "profesional",
+        header: "Profesional",
+        width: "6.5rem",
+        cellClassName: "text-center",
+        cell: (u) => <RoleStatusCell status={statusOf(u, "profesional")} />,
+      },
+      {
+        id: "created_at",
+        header: "Registro",
+        sortable: true,
+        width: "7.5rem",
+        cellClassName: "text-muted-foreground tabular-nums",
+        cell: (u) =>
+          u.created_at
+            ? new Date(u.created_at).toLocaleDateString("es-CO")
+            : "—",
       },
     ]
-
-    if (listMode !== "todos") {
-      cols.push({
-        id: "municipios",
-        header: "Municipios",
-        minWidth: "12rem",
-        cell: (u) => (
-          <span className="text-muted-foreground">
-            {u.municipios.length > 0
-              ? u.municipios.map((m) => m.nombre).join(", ")
-              : "sin asignar"}
-          </span>
-        ),
-      })
-    }
-
-    cols.push({
-      id: "created_at",
-      header: "Registro",
-      sortable: true,
-      width: "7.5rem",
-      cellClassName: "text-muted-foreground tabular-nums",
-      cell: (u) =>
-        u.created_at
-          ? new Date(u.created_at).toLocaleDateString("es-CO")
-          : "—",
-    })
-
-    return cols
-  }, [listMode])
+  }, [])
 
   const tableSort: DataTableSortState = { id: sort, order }
 
@@ -274,9 +312,9 @@ export function AdminUsersListClient({
 
   return (
     <DashboardShell
-      title={title}
-      subtitle={subtitle}
-      tabs={perfilTabsForRole(user, activePath)}
+      title="Usuarios"
+      subtitle="Todas las cuentas. El check es rol activo; el aviso amarillo es solicitud pendiente."
+      tabs={tabs}
     >
       {error ? (
         <p className="mb-4 text-sm text-destructive">{error}</p>
@@ -299,19 +337,48 @@ export function AdminUsersListClient({
         }}
         showColumnToggle
         toolbar={
-          <div className="min-w-[14rem] max-w-md flex-1 space-y-2">
-            <Label htmlFor="admin-users-q">Buscar</Label>
-            <div className="relative">
-              <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="admin-users-q"
-                value={qDraft}
-                onChange={(e) => setQDraft(e.target.value)}
-                placeholder="Nombre, correo o celular"
-                className="pl-9"
-              />
+          <form
+            onSubmit={applyFilters}
+            className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end"
+          >
+            <div className="min-w-[12rem] flex-1 space-y-2">
+              <Label htmlFor="admin-users-q">Buscar</Label>
+              <div className="relative">
+                <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="admin-users-q"
+                  value={qDraft}
+                  onChange={(e) => setQDraft(e.target.value)}
+                  placeholder="Nombre, correo o celular"
+                  className="pl-9"
+                />
+              </div>
             </div>
-          </div>
+            <div className="w-full space-y-2 sm:w-56">
+              <Label htmlFor="admin-users-tipo">Tipo de usuario</Label>
+              <Select
+                value={tipoDraft}
+                onValueChange={(v) => {
+                  if (v) setTipoDraft(parseTipo(v))
+                }}
+                items={TIPO_OPTIONS}
+              >
+                <SelectTrigger id="admin-users-tipo" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIPO_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button type="submit" className="sm:mb-0.5">
+              Filtrar
+            </Button>
+          </form>
         }
         footer={
           <div className="flex flex-wrap items-center justify-between gap-3">

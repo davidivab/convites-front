@@ -74,7 +74,14 @@ export type Iniciativa = {
     celular: string | null;
     instruccionesPago: string;
   }>;
-  galeria?: Array<{ id: string; url: string }>;
+  galeria?: Array<{
+    id: string;
+    tipo: "imagen" | "video";
+    url: string;
+    ancho?: number | null;
+    alto?: number | null;
+    duracionSegundos?: number | null;
+  }>;
   enlaces?: Array<{ id: string; titulo: string; url: string }>;
   ayudantes: Ayudante[];
   asistentes: number;

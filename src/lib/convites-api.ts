@@ -9,6 +9,7 @@ import type {
   ApiCentro,
   ApiDepartamento,
   ApiDisponibilidad,
+  ApiGaleriaItem,
   ApiHabilidad,
   ApiIniciativa,
   ApiMaterial,
@@ -302,26 +303,18 @@ export async function uploadIniciativaGaleria(
   id: string | number,
   blob: Blob,
   filename = "foto.jpg",
-): Promise<{
-  id: number;
-  url: string;
-  orden: number;
-  ancho: number;
-  alto: number;
-  version: number;
-}> {
+  options?: { duracionSegundos?: number },
+): Promise<ApiGaleriaItem & { version: number }> {
   const form = new FormData();
-  form.append("imagen", blob, filename);
-  const res = await apiFetch<{
-    data: {
-      id: number;
-      url: string;
-      orden: number;
-      ancho: number;
-      alto: number;
-      version: number;
-    };
-  }>(`/api/iniciativas/${id}/galeria`, { method: "POST", body: form }, { token });
+  form.append("archivo", blob, filename);
+  if (options?.duracionSegundos != null) {
+    form.append("duracion_segundos", String(Math.round(options.duracionSegundos)));
+  }
+  const res = await apiFetch<{ data: ApiGaleriaItem & { version: number } }>(
+    `/api/iniciativas/${id}/galeria`,
+    { method: "POST", body: form },
+    { token },
+  );
   return res.data;
 }
 
@@ -765,6 +758,8 @@ export async function contactarProfesional(
   );
 }
 
+export type AdminRoleStatus = "active" | "pending" | "none";
+
 export type ApiAdminUser = {
   id: number;
   name: string;
@@ -772,14 +767,30 @@ export type ApiAdminUser = {
   celular: string | null;
   inicial: string | null;
   roles: string[];
+  roles_status?: {
+    ciudadano: AdminRoleStatus;
+    moderador: AdminRoleStatus;
+    voluntario: AdminRoleStatus;
+    profesional: AdminRoleStatus;
+  };
   municipios: Array<{
     id: number;
     nombre: string;
     slug: string;
     departamento?: { id: number; nombre: string; slug: string } | null;
   }>;
+  solicitudes_rol?: ApiSolicitudRol[];
+  profesional?: ApiProfesional | null;
   created_at: string | null;
 };
+
+export type AdminUserTipo =
+  | "todos"
+  | "ciudadano"
+  | "moderador"
+  | "voluntario"
+  | "profesional"
+  | "pendientes";
 
 export async function fetchAdminUsers(
   token: string,
@@ -787,6 +798,8 @@ export async function fetchAdminUsers(
     role?: "moderator" | "voluntario" | "admin" | "member" | "profesional";
     /** Lista todos los registrados (ciudadanos incl. solo `member`). */
     todos?: boolean;
+    /** P56 — filtro unificado (activo o pendiente del tipo). */
+    tipo?: AdminUserTipo;
     /** @deprecated Preferir `todos` — el API ya no usa scope. */
     scope?: "all" | "staff";
     q?: string;
@@ -800,6 +813,7 @@ export async function fetchAdminUsers(
   meta?: { current_page?: number; last_page?: number; total?: number };
 }> {
   const qs = new URLSearchParams();
+  if (params?.tipo) qs.set("tipo", params.tipo);
   if (params?.role) qs.set("role", params.role);
   if (params?.todos || params?.scope === "all") qs.set("todos", "1");
   if (params?.q?.trim()) qs.set("q", params.q.trim());
@@ -823,6 +837,18 @@ export async function fetchAdminUsers(
         }
       : undefined,
   };
+}
+
+export async function fetchAdminUser(
+  token: string,
+  userId: number,
+): Promise<ApiAdminUser> {
+  const res = await apiFetch<{ data: ApiAdminUser }>(
+    `/api/admin/users/${userId}`,
+    {},
+    { token },
+  );
+  return res.data;
 }
 
 export async function createAdminUser(
@@ -1167,6 +1193,19 @@ export async function rechazarSolicitudRol(
     { token },
   );
   return res.data;
+}
+
+export async function moderarProfesional(
+  token: string,
+  id: number,
+  accion: "aprobar" | "rechazar" | "solicitar-cambios",
+  body: Record<string, unknown> = {},
+) {
+  return apiFetch<{ data: ApiProfesional }>(
+    `/api/moderacion/profesionales/${id}/${accion}`,
+    { method: "POST", body: JSON.stringify(body) },
+    { token },
+  );
 }
 
 export type ApiEstadisticasDia = { fecha: string; total: number };

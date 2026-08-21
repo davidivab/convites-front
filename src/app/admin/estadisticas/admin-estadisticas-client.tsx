@@ -25,7 +25,7 @@ import {
   type ApiAdminEstadisticas,
 } from "@/lib/convites-api"
 import { designTokenHex } from "@/lib/design-tokens"
-import { perfilTabsForRole } from "@/lib/role-tree"
+import { useAdminPerfilTabs } from "@/components/admin/use-admin-perfil-tabs"
 
 const ESTADO_LABEL: Record<string, string> = {
   borrador: "Borrador",
@@ -176,6 +176,7 @@ export function AdminEstadisticasClient() {
     "/admin/estadisticas",
     "admin",
   )
+  const tabs = useAdminPerfilTabs(user, token, "/admin/estadisticas")
 
   const urlStart = searchParams.get("start_date")
   const urlEnd = searchParams.get("end_date")
@@ -305,7 +306,7 @@ export function AdminEstadisticasClient() {
     <DashboardShell
       title="Estadísticas"
       subtitle="Usuarios, convites y avance en el rango que elijas."
-      tabs={perfilTabsForRole(user, "/admin/estadisticas")}
+      tabs={tabs}
     >
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end">
         <div className="grid flex-1 gap-2 sm:max-w-xs">

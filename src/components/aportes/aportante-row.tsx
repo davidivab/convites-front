@@ -34,6 +34,14 @@ export function AportanteRow({
               </span>
             ) : null}
           </p>
+          {!aporte.anonimo &&
+          (aporte.aportante?.email || aporte.aportante?.celular) ? (
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              {[aporte.aportante.email, aporte.aportante.celular]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          ) : null}
           <p className="mt-0.5 text-sm text-muted-foreground">
             {itemsLabel || (aporte.asiste_al_convite ? "Solo asistencia" : "Sin ítems")}
             {aporte.asiste_al_convite && itemsLabel ? " · Asiste al convite" : ""}
