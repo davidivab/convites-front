@@ -52,7 +52,7 @@ export default function QuienesSomosPage() {
             Una vieja costumbre del campo, ahora en digital
           </h1>
           <p className="mt-5 text-pretty text-lg leading-relaxed text-muted-foreground">
-            En los pueblos de Risaralda, cuando a alguien se le caía el techo, el
+            En los pueblos de Colombia, cuando a alguien se le caía el techo, el
             barrio entero se juntaba un sábado a levantarlo. Cada quien llevaba
             lo que tenía: unas tejas, un bulto de cemento, el almuerzo. Eso es un
             convite. Convites solo lo lleva a la pantalla para que sea más fácil
