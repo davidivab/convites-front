@@ -204,6 +204,7 @@ export type ApiAporte = {
   anonimo?: boolean;
   confirmado_at: string | null;
   cancelado_at: string | null;
+  cancelado_motivo?: string | null;
   cumplido_at?: string | null;
   aportante?: {
     id: number | null;

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Fraunces, Instrument_Sans } from "next/font/google";
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { GoogleAnalytics } from "@/components/analytics/google-analytics";
+import { WhatsAppFloat } from "@/components/layout/whatsapp-float";
 import { designTokenHex } from "@/lib/design-tokens";
 import { rootMetadata } from "@/lib/seo/metadata";
 import "./globals.css";
@@ -37,7 +38,10 @@ export default function RootLayout({
     >
       <body className="font-sans antialiased">
         <GoogleAnalytics />
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          {children}
+          <WhatsAppFloat />
+        </AuthProvider>
       </body>
     </html>
   );

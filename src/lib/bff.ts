@@ -10,7 +10,7 @@ export function laravelUrl(path: string): string {
 
 export async function forwardToLaravel(
   path: string,
-  init: RequestInit & { token?: string | null } = {},
+  init: RequestInit & { token?: string | null; clientRequest?: Request } = {},
 ): Promise<Response> {
   const headers = new Headers(init.headers);
   headers.set("Accept", "application/json");
@@ -21,7 +21,19 @@ export async function forwardToLaravel(
     headers.set("Authorization", `Bearer ${init.token}`);
   }
 
-  const { token: _t, ...rest } = init;
+  // Para que Laravel throttle por IP del navegador, no por la del Node BFF.
+  if (init.clientRequest) {
+    const incoming = init.clientRequest.headers;
+    const forwarded =
+      incoming.get("x-forwarded-for") ??
+      incoming.get("x-real-ip") ??
+      incoming.get("cf-connecting-ip");
+    if (forwarded) {
+      headers.set("X-Forwarded-For", forwarded.split(",")[0]!.trim());
+    }
+  }
+
+  const { token: _t, clientRequest: _c, ...rest } = init;
   return fetch(laravelUrl(path), {
     ...rest,
     headers,

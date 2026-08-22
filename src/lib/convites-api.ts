@@ -570,10 +570,21 @@ export async function eliminarEvidenciaPropia(
   return res.data;
 }
 
-export async function cancelarAporte(token: string, aporteId: number) {
+export async function cancelarAporte(
+  token: string,
+  aporteId: number,
+  opts?: { motivo?: string | null },
+) {
+  const body: Record<string, string> = {};
+  const motivo = opts?.motivo?.trim();
+  if (motivo) body.motivo = motivo;
+
   return apiFetch<{ data: ApiAporte }>(
     `/api/aportes/${aporteId}/cancelar`,
-    { method: "POST" },
+    {
+      method: "POST",
+      body: Object.keys(body).length > 0 ? JSON.stringify(body) : undefined,
+    },
     { token },
   );
 }

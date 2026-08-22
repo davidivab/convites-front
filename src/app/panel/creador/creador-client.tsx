@@ -16,6 +16,7 @@ import {
   fetchMisIniciativas,
   eliminarEvidenciaAporte,
   marcarAporteRecepcion,
+  cancelarAporte,
 } from "@/lib/convites-api"
 import { progresoTotal, type Iniciativa } from "@/lib/data"
 import type { ApiAporte } from "@/lib/types"
@@ -196,6 +197,33 @@ export function PanelCreadorClient() {
         err instanceof ApiError
           ? err.body.message || "No pudimos quitar la evidencia."
           : "No pudimos quitar la evidencia.",
+      )
+    } finally {
+      setRecepcionId(null)
+    }
+  }
+
+  async function onAnularAporte(
+    ini: Iniciativa,
+    aporte: ApiAporte,
+    motivo: string | null,
+  ) {
+    if (!token || recepcionId) return
+    setRecepcionId(aporte.id)
+    setError(null)
+    try {
+      const res = await cancelarAporte(token, aporte.id, { motivo })
+      setAportantesByIni((prev) => ({
+        ...prev,
+        [ini.id]: (prev[ini.id] ?? []).map((a) =>
+          a.id === aporte.id ? res.data : a,
+        ),
+      }))
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.body.message || "No pudimos anular el aporte."
+          : "No pudimos anular el aporte.",
       )
     } finally {
       setRecepcionId(null)
@@ -489,6 +517,9 @@ export function PanelCreadorClient() {
                             }
                             onEliminarEvidencia={() =>
                               void onEliminarEvidencia(ini, aporte)
+                            }
+                            onAnular={(motivo) =>
+                              void onAnularAporte(ini, aporte, motivo)
                             }
                           />
                         ))}

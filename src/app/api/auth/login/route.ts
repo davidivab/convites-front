@@ -6,6 +6,7 @@ export async function POST(request: Request) {
   const upstream = await forwardToLaravel("/api/auth/login", {
     method: "POST",
     body,
+    clientRequest: request,
   });
 
   const data = await upstream.json().catch(() => ({}));

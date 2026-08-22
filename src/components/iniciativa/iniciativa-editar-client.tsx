@@ -35,6 +35,7 @@ import {
   fetchIniciativaApi,
   eliminarEvidenciaAporte,
   marcarAporteRecepcion,
+  cancelarAporte,
   updateIniciativa,
   uploadIniciativaGaleria,
   uploadIniciativaPortada,
@@ -542,6 +543,26 @@ export function IniciativaEditarClient({
         err instanceof ApiError
           ? err.body.message || "No pudimos quitar la evidencia."
           : "No pudimos quitar la evidencia.",
+      )
+    } finally {
+      setRecepcionId(null)
+    }
+  }
+
+  async function onAnularAporte(aporte: ApiAporte, motivo: string | null) {
+    if (!token || recepcionId) return
+    setRecepcionId(aporte.id)
+    setError(null)
+    try {
+      const res = await cancelarAporte(token, aporte.id, { motivo })
+      setAportes((prev) =>
+        prev.map((a) => (a.id === aporte.id ? res.data : a)),
+      )
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.body.message || "No pudimos anular el aporte."
+          : "No pudimos anular el aporte.",
       )
     } finally {
       setRecepcionId(null)
@@ -1631,7 +1652,8 @@ export function IniciativaEditarClient({
             <TabsContent value="aportantes" className="space-y-4 pt-2">
               <p className="text-sm text-muted-foreground">
                 Compromisos de aporte y su estado (confirmado, cumplido,
-                cancelado). Puedes marcar recepción y gestionar evidencias.
+                cancelado). Puedes marcar recepción, anular un aporte falso o
+                gestionar evidencias.
               </p>
               {aportes.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
@@ -1649,6 +1671,7 @@ export function IniciativaEditarClient({
                       }
                       onNoRecibido={() => void onMarcarRecepcion(a, false)}
                       onEliminarEvidencia={() => void onEliminarEvidencia(a)}
+                      onAnular={(motivo) => void onAnularAporte(a, motivo)}
                     />
                   ))}
                 </ul>
