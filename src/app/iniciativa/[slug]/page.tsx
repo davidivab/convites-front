@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import {
   ArrowLeft,
@@ -20,9 +21,52 @@ import { IniciativaGaleriaGrid } from "@/components/iniciativa/iniciativa-galeri
 import { AvancesAsideCard } from "@/components/iniciativa/avances-aside-card";
 import { IniciativaAporteCtas } from "@/components/iniciativa/iniciativa-aporte-ctas";
 import { ConviteRecordatorio } from "@/components/iniciativa/convite-recordatorio";
+import { JsonLd } from "@/components/seo/json-ld";
 import { CATEGORIAS, progresoTotal } from "@/lib/data";
 import { fetchAvances, fetchIniciativa } from "@/lib/convites-api";
 import type { ApiAvance } from "@/lib/types";
+import { absoluteUrl } from "@/lib/site-url";
+import { buildIniciativaJsonLd } from "@/lib/seo/json-ld";
+
+export const revalidate = 120;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  try {
+    const ini = await fetchIniciativa(slug, { server: true });
+    const title = `${ini.titulo} — convite en ${ini.zona}`;
+    const description =
+      ini.resumen?.slice(0, 160) ||
+      `Convite comunitario en ${ini.zona}: aporta materiales o tiempo el ${ini.fechaConvite}.`;
+    const url = absoluteUrl(`/iniciativa/${ini.slug}`);
+    const image = absoluteUrl(ini.imagen);
+    return {
+      title,
+      description,
+      alternates: { canonical: `/iniciativa/${ini.slug}` },
+      openGraph: {
+        type: "website",
+        locale: "es_CO",
+        url,
+        title,
+        description,
+        images: [{ url: image, alt: ini.titulo }],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title,
+        description,
+        images: [image],
+      },
+    };
+  } catch {
+    return { title: "Convite" };
+  }
+}
 
 export default async function IniciativaPage({
   params,
@@ -55,6 +99,7 @@ export default async function IniciativaPage({
 
   return (
     <div className="flex min-h-screen flex-col">
+      <JsonLd data={buildIniciativaJsonLd(ini)} />
       <SiteHeader />
 
       <main className="flex-1">

@@ -3,6 +3,7 @@ import { Fraunces, Instrument_Sans } from "next/font/google";
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { GoogleAnalytics } from "@/components/analytics/google-analytics";
 import { designTokenHex } from "@/lib/design-tokens";
+import { rootMetadata } from "@/lib/seo/metadata";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -17,11 +18,7 @@ const instrumentSans = Instrument_Sans({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "Convites — Plataforma ciudadana de convites comunitarios",
-  description:
-    "Convites es una plataforma ciudadana de convites comunitarios en las zonas afectadas de Colombia. No somos fundación ni empresa: somos vecinos organizándonos.",
-};
+export const metadata: Metadata = rootMetadata();
 
 export const viewport: Viewport = {
   colorScheme: "light",
@@ -35,7 +32,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="es"
+      lang="es-CO"
       className={`${fraunces.variable} ${instrumentSans.variable} bg-background`}
     >
       <body className="font-sans antialiased">

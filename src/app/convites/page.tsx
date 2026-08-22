@@ -19,9 +19,10 @@ import type { GeoOption, MapaPin } from "./convites-types";
 export type { GeoOption, MapaPin } from "./convites-types";
 
 export const metadata = {
-  title: "Ver convites — Convites",
+  title: "Ver convites abiertos en Colombia",
   description:
-    "Iniciativas comunitarias abiertas en las zonas afectadas de Colombia.",
+    "Iniciativas comunitarias abiertas en las zonas afectadas de Colombia. Filtra por municipio, categoría o material y súmate con lo que puedas aportar.",
+  alternates: { canonical: "/convites" },
 };
 
 const PER_PAGE = 12;

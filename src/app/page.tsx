@@ -9,10 +9,15 @@ import { TrustBanner } from "@/components/layout/trust-banner";
 import { ComoFunciona } from "@/components/marketing/como-funciona";
 import { HomeCtaCards } from "@/components/marketing/home-cta-cards";
 import { CampaignCard } from "@/components/iniciativa/campaign-card";
+import { JsonLd } from "@/components/seo/json-ld";
 import { fetchIniciativas } from "@/lib/convites-api";
 import type { Iniciativa } from "@/lib/data";
+import { homeMetadata } from "@/lib/seo/metadata";
+import { buildHomeGraphJsonLd } from "@/lib/seo/json-ld";
 
 export const revalidate = 60;
+
+export const metadata = homeMetadata();
 
 export default async function HomePage() {
   let destacadas: Iniciativa[] = [];
@@ -33,6 +38,7 @@ export default async function HomePage() {
 
   return (
     <div className="flex min-h-screen flex-col">
+      <JsonLd data={buildHomeGraphJsonLd()} />
       <SiteHeader />
 
       <main className="flex-1">
@@ -136,7 +142,8 @@ export default async function HomePage() {
           <div className="flex flex-col items-start gap-6 rounded-2xl border border-border bg-card px-6 py-10 md:flex-row md:items-center md:justify-between md:px-10">
             <div className="max-w-xl">
               <h2 className="font-serif text-2xl font-semibold text-balance text-foreground md:text-3xl">
-                ¿Luego del terremoto de agosto tu barrio o vereda necesita un convite?
+                ¿Luego del terremoto de agosto tu barrio o vereda necesita un
+                convite?
               </h2>
               <p className="mt-2 text-pretty leading-relaxed text-muted-foreground">
                 Cuenta qué pasó y qué falta. Lo revisamos y lo hacemos llegar a
