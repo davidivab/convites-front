@@ -1067,6 +1067,7 @@ export type ApiMiPerfilProfesional = {
   descripcion: string | null;
   estado: string | null;
   estado_label?: string | null;
+  visible_en_directorio?: boolean;
   email: string | null;
   celular: string | null;
   zona: { id: number; slug: string; nombre: string } | null;
@@ -1120,6 +1121,7 @@ export async function updateMiPerfilProfesional(
     modalidad?: string;
     disponibilidad?: string;
     descripcion?: string;
+    visible_en_directorio?: boolean;
   },
 ): Promise<ApiMiPerfilProfesional> {
   const res = await apiFetch<{ data: ApiMiPerfilProfesional }>(
@@ -1128,6 +1130,16 @@ export async function updateMiPerfilProfesional(
     { token },
   );
   return res.data;
+}
+
+export async function deleteMiPerfilProfesional(
+  token: string,
+): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(
+    "/api/mi-perfil-profesional",
+    { method: "DELETE" },
+    { token },
+  );
 }
 
 export async function fetchMisSolicitudesProfesional(

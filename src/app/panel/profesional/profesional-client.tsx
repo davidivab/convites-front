@@ -17,6 +17,7 @@ import {
 import { useRequireAuth } from "@/hooks/use-require-auth"
 import { ApiError } from "@/lib/api"
 import {
+  deleteMiPerfilProfesional,
   fetchMiPerfilProfesional,
   fetchMisSolicitudesProfesional,
   patchSolicitudProfesional,
@@ -65,6 +66,8 @@ export function PanelProfesionalClient() {
   const [modalidad, setModalidad] = useState("presencial")
   const [disponibilidad, setDisponibilidad] = useState("")
   const [descripcion, setDescripcion] = useState("")
+  const [visibleEnDirectorio, setVisibleEnDirectorio] = useState(true)
+  const [deleting, setDeleting] = useState(false)
 
   const load = useCallback(async () => {
     if (!token) return
@@ -82,6 +85,7 @@ export function PanelProfesionalClient() {
       setModalidad(p.modalidad ?? "presencial")
       setDisponibilidad(p.disponibilidad ?? "")
       setDescripcion(p.descripcion ?? "")
+      setVisibleEnDirectorio(p.visible_en_directorio !== false)
     } catch (err) {
       setPerfil(null)
       setSolicitudes([])
@@ -122,8 +126,10 @@ export function PanelProfesionalClient() {
         modalidad,
         disponibilidad: disponibilidad.trim(),
         descripcion: descripcion.trim(),
+        visible_en_directorio: visibleEnDirectorio,
       })
       setPerfil(updated)
+      setVisibleEnDirectorio(updated.visible_en_directorio !== false)
       setSavedMsg("Cambios guardados.")
     } catch (err) {
       setError(
@@ -133,6 +139,61 @@ export function PanelProfesionalClient() {
       )
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function onToggleVisible(next: boolean) {
+    if (!token || saving) return
+    setSaving(true)
+    setError(null)
+    setSavedMsg(null)
+    const prev = visibleEnDirectorio
+    setVisibleEnDirectorio(next)
+    try {
+      const updated = await updateMiPerfilProfesional(token, {
+        visible_en_directorio: next,
+      })
+      setPerfil(updated)
+      setVisibleEnDirectorio(updated.visible_en_directorio !== false)
+      setSavedMsg(
+        next
+          ? "Tu perfil ya es visible en Manos profesionales."
+          : "Tu perfil quedó oculto del directorio.",
+      )
+    } catch (err) {
+      setVisibleEnDirectorio(prev)
+      setError(
+        err instanceof ApiError
+          ? err.body.message || "No pudimos actualizar la visibilidad."
+          : "No pudimos actualizar la visibilidad.",
+      )
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function onEliminarPerfil() {
+    if (!token || deleting) return
+    const ok = window.confirm(
+      "¿Eliminar tu perfil profesional del directorio?\n\nTu cuenta de Convites se mantiene. Solo se quita el perfil público de Manos profesionales. Podrás registrar uno nuevo después.",
+    )
+    if (!ok) return
+    setDeleting(true)
+    setError(null)
+    try {
+      await deleteMiPerfilProfesional(token)
+      setPerfil(null)
+      setSolicitudes([])
+      setSavedMsg(null)
+      setError(null)
+      window.location.assign("/panel")
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.body.message || "No pudimos eliminar el perfil."
+          : "No pudimos eliminar el perfil.",
+      )
+      setDeleting(false)
     }
   }
 
@@ -374,6 +435,32 @@ export function PanelProfesionalClient() {
             ) : null}
           </section>
 
+          <section className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
+            <h2 className="font-serif text-xl text-foreground">
+              Visibilidad en el directorio
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Si lo ocultas, tu perfil aprobado deja de aparecer en Manos
+              profesionales. Tu cuenta sigue activa y puedes volver a mostrarlo
+              cuando quieras.
+            </p>
+            <label className="flex cursor-pointer items-center gap-3 text-sm text-foreground">
+              <input
+                type="checkbox"
+                className="size-4 accent-primary"
+                checked={visibleEnDirectorio}
+                disabled={saving || deleting || perfil.estado !== "aprobado"}
+                onChange={(e) => void onToggleVisible(e.target.checked)}
+              />
+              Visible en Manos profesionales
+            </label>
+            {perfil.estado !== "aprobado" ? (
+              <p className="text-xs text-muted-foreground">
+                La visibilidad pública aplica cuando el perfil esté aprobado.
+              </p>
+            ) : null}
+          </section>
+
           <form onSubmit={(e) => void onSave(e)} className="space-y-5">
             <h2 className="font-serif text-xl text-foreground">Editar datos</h2>
             <div className="grid gap-5 sm:grid-cols-2">
@@ -432,10 +519,28 @@ export function PanelProfesionalClient() {
                 />
               </div>
             </div>
-            <Button type="submit" disabled={saving}>
+            <Button type="submit" disabled={saving || deleting}>
               {saving ? "Guardando…" : "Guardar cambios"}
             </Button>
           </form>
+
+          <section className="space-y-3 border-t border-border pt-8">
+            <h2 className="font-serif text-xl text-foreground">
+              Eliminar perfil profesional
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Quita tu perfil del directorio y de Manos profesionales. No elimina
+              tu cuenta de Convites; solo este perfil público.
+            </p>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={deleting || saving}
+              onClick={() => void onEliminarPerfil()}
+            >
+              {deleting ? "Eliminando…" : "Eliminar mi perfil profesional"}
+            </Button>
+          </section>
         </div>
           )}
         </div>
