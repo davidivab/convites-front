@@ -5,7 +5,7 @@ import { RegistrarseClient } from "./registrarse-client"
 export const metadata: Metadata = {
   title: "Crear cuenta — Convites",
   description:
-    "Regístrate para aportar a los convites de tu comunidad. Cuéntanos cómo puedes ayudar.",
+    "Regístrate con tu nombre y correo. Te enviamos un código para verificar y aportar a tu comunidad.",
 }
 
 export default function RegistrarsePage() {

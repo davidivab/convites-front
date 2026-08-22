@@ -135,7 +135,7 @@ export function IniciativaAporteCtas({
         <Button
           size="lg"
           className="h-12 w-full text-base"
-          render={<Link href={`/iniciativa/${slug}/aportar`} />}
+          render={<Link href={`/iniciativa/${slug}/aportar?paso=1`} />}
         >
           Me sumo llevando algo
         </Button>

@@ -246,6 +246,14 @@ export function IngresarClient() {
               Regístrate
             </Link>
           </p>
+          <p className="mt-2 text-center text-sm text-muted-foreground">
+            <Link
+              href={`/recuperar${authNextQuery(next)}`}
+              className="font-medium text-primary transition-colors hover:text-primary/80"
+            >
+              He olvidado mi contraseña
+            </Link>
+          </p>
         </div>
       </div>
 
@@ -261,8 +269,8 @@ export function IngresarClient() {
         <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-foreground/20 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-10">
           <p className="max-w-md text-balance font-serif text-2xl leading-snug text-background">
-            &ldquo;Aquí nadie manda plata. Aquí se manda una mano, una teja, un
-            día de trabajo.&rdquo;
+            &ldquo;Aquí no se envía dinero. Aquí se manda una mano, una teja, un
+            día de trabajo, un bulto de cemento, un almuerzo, lo que sea necesario.&rdquo;
           </p>
           <p className="mt-3 text-sm text-background/80">
             Doña Rosa, lideresa comunitaria en Santa Rosa de Cabal

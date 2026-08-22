@@ -8,6 +8,8 @@ export type AporteDraft = {
   comproDeProveedor: boolean
   proveedorId: string
   fechaEntrega: string
+  /** Paso del wizard (1–4) al ir a auth. */
+  paso?: number
   /** Abrir modal de compromiso al volver (p. ej. solo tiempo). */
   openCompromiso?: boolean
   modoTiempo?: boolean

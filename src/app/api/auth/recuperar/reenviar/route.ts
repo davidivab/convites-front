@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { forwardToLaravel } from "@/lib/bff";
 
-/** Paso 1 OTP: no crea cookie de sesión todavía. */
 export async function POST(request: Request) {
   const body = await request.text();
-  const upstream = await forwardToLaravel("/api/auth/register", {
+  const upstream = await forwardToLaravel("/api/auth/recuperar/reenviar", {
     method: "POST",
     body,
     clientRequest: request,

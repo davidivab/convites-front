@@ -355,10 +355,12 @@ export default async function IniciativaPage({
                   Todo suma. Cada aporte cuenta.
                 </p>
 
-                <div className="mt-3 divide-y divide-border">
-                  {ini.items.map((item) => (
-                    <ItemProgressRow key={item.id} item={item} />
-                  ))}
+                <div className="mt-3 lg:max-h-[600px] lg:overflow-y-auto lg:pr-1 scrollbar-brand">
+                  <div className="divide-y divide-border">
+                    {ini.items.map((item) => (
+                      <ItemProgressRow key={item.id} item={item} />
+                    ))}
+                  </div>
                 </div>
 
                 <IniciativaAporteCtas

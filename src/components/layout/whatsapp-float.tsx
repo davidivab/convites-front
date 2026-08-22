@@ -7,6 +7,7 @@ const HIDDEN_PREFIXES = [
   "/admin",
   "/ingresar",
   "/registrarse",
+  "/recuperar",
   "/registro-profesional",
   "/auth",
 ] as const;

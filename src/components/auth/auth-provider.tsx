@@ -41,18 +41,22 @@ type AuthState = {
   register: (payload: {
     name: string;
     email: string;
-    password: string;
-    password_confirmation: string;
-    celular?: string;
-    municipio_id?: number;
-    barrio?: string;
-    genero?: string;
-    edad?: number;
-    aptitud_fisica?: string;
-    notas_salud?: string;
-    habilidad_ids?: number[];
-    disponibilidad_ids?: number[];
-  }) => Promise<void>;
+    acepta_terminos: boolean;
+    acepta_descargo: boolean;
+  }) => Promise<{ pending_verification: boolean; email: string }>;
+  verifyRegister: (payload: {
+    email: string;
+    code: string;
+  }) => Promise<AuthUser>;
+  resendRegisterCode: (email: string) => Promise<void>;
+  requestRecover: (
+    email: string,
+  ) => Promise<{ pending_verification: boolean; email: string }>;
+  verifyRecover: (payload: {
+    email: string;
+    code: string;
+  }) => Promise<AuthUser>;
+  resendRecoverCode: (email: string) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
@@ -154,27 +158,75 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (payload: {
       name: string;
       email: string;
-      password: string;
-      password_confirmation: string;
-      celular?: string;
-      municipio_id?: number;
-      barrio?: string;
-      genero?: string;
-      edad?: number;
-      aptitud_fisica?: string;
-      notas_salud?: string;
-      habilidad_ids?: number[];
-      disponibilidad_ids?: number[];
+      acepta_terminos: boolean;
+      acepta_descargo: boolean;
     }) => {
-      const res = await bffJson<{ user: AuthUser }>("/api/auth/register", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-      setUser(res.user);
-      setToken(SESSION_FLAG);
+      return bffJson<{ pending_verification: boolean; email: string }>(
+        "/api/auth/register",
+        {
+          method: "POST",
+          body: JSON.stringify(payload),
+        },
+      );
     },
     [],
   );
+
+  const verifyRegister = useCallback(
+    async (payload: { email: string; code: string }) => {
+      const res = await bffJson<{ user: AuthUser }>(
+        "/api/auth/register/verificar",
+        {
+          method: "POST",
+          body: JSON.stringify(payload),
+        },
+      );
+      setUser(res.user);
+      setToken(SESSION_FLAG);
+      return res.user;
+    },
+    [],
+  );
+
+  const resendRegisterCode = useCallback(async (email: string) => {
+    await bffJson("/api/auth/register/reenviar", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  }, []);
+
+  const requestRecover = useCallback(async (email: string) => {
+    return bffJson<{ pending_verification: boolean; email: string }>(
+      "/api/auth/recuperar",
+      {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      },
+    );
+  }, []);
+
+  const verifyRecover = useCallback(
+    async (payload: { email: string; code: string }) => {
+      const res = await bffJson<{ user: AuthUser }>(
+        "/api/auth/recuperar/verificar",
+        {
+          method: "POST",
+          body: JSON.stringify(payload),
+        },
+      );
+      setUser(res.user);
+      setToken(SESSION_FLAG);
+      return res.user;
+    },
+    [],
+  );
+
+  const resendRecoverCode = useCallback(async (email: string) => {
+    await bffJson("/api/auth/recuperar/reenviar", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  }, []);
 
   const logout = useCallback(async () => {
     try {
@@ -200,6 +252,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       completeGoogleLogin,
       completeGoogleRegistro,
       register,
+      verifyRegister,
+      resendRegisterCode,
+      requestRecover,
+      verifyRecover,
+      resendRecoverCode,
       logout,
       refresh,
       hasPermission,
@@ -212,6 +269,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       completeGoogleLogin,
       completeGoogleRegistro,
       register,
+      verifyRegister,
+      resendRegisterCode,
+      requestRecover,
+      verifyRecover,
+      resendRecoverCode,
       logout,
       refresh,
       hasPermission,
